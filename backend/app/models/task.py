@@ -1,0 +1,29 @@
+from sqlalchemy import Column, String, Text, Date
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import func
+from sqlalchemy.types import DateTime
+import uuid
+
+from app.models.base import Base
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id = Column(UUID(as_uuid=True), nullable=False)
+
+    title = Column(String, nullable=False)
+    description = Column(Text)
+
+    status = Column(String, nullable=False, default="BACKLOG")
+    priority = Column(String, nullable=False, default="MEDIUM")
+
+    assignee_id = Column(UUID(as_uuid=True))
+
+    due_date = Column(Date)
+
+    created_by = Column(UUID(as_uuid=True))
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

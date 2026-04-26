@@ -1,10 +1,21 @@
 from uuid import UUID
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from app.models.project import Project
+from app.models.client import Client
 
 
 def create_project(db: Session, data):
+    client = (
+        db.query(Client)
+        .filter(Client.id == data.client_id, Client.deleted_at.is_(None))
+        .first()
+    )
+
+    if not client:
+        raise HTTPException(status_code=400, detail="Client does not exist")
+
     project = Project(**data.model_dump())
     db.add(project)
     db.commit()
@@ -35,7 +46,19 @@ def update_project(db: Session, project_id: UUID, data):
     if not project:
         return None
 
-    for field, value in data.model_dump(exclude_unset=True).items():
+    update_data = data.model_dump(exclude_unset=True)
+
+    if "client_id" in update_data:
+        client = (
+            db.query(Client)
+            .filter(Client.id == update_data["client_id"], Client.deleted_at.is_(None))
+            .first()
+        )
+
+        if not client:
+            raise HTTPException(status_code=400, detail="Client does not exist")
+
+    for field, value in update_data.items():
         setattr(project, field, value)
 
     db.commit()

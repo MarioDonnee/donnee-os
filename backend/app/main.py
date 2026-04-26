@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.routes import health, db_test, tasks, clients, projects
+from app.api.routes import health, db_test, tasks, clients, projects, dashboard
 
 app = FastAPI(
     title="Donnée OS API",
@@ -9,6 +9,7 @@ app = FastAPI(
 
 app.include_router(health.router, prefix="/health", tags=["Health"])
 app.include_router(db_test.router, prefix="/db-test", tags=["Database"])
-app.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])
 app.include_router(clients.router, prefix="/clients", tags=["Clients"])
 app.include_router(projects.router, prefix="/projects", tags=["Projects"])
+app.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])
+app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])

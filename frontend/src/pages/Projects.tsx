@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../services/api";
+import { getCache, setCache } from "../services/cache";
 
 type Client = {
   id: string;
@@ -16,6 +17,10 @@ type Project = {
   due_date?: string | null;
   health_score?: number | null;
 };
+
+const clientsCacheKey = "clients:list";
+const projectsCacheKey = "projects:list";
+const projectStatusesCacheKey = "metadata:project-statuses";
 
 function getProjectStatusClass(status: string) {
   const normalized = status.toLowerCase();
@@ -61,20 +66,23 @@ function getHealthClass(score: number) {
 }
 
 export function Projects() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [statuses, setStatuses] = useState<string[]>([]);
+  const cachedClients = getCache<Client[]>(clientsCacheKey);
+  const cachedProjects = getCache<Project[]>(projectsCacheKey);
+  const cachedProjectStatuses = getCache<string[]>(projectStatusesCacheKey);
+  const [clients, setClients] = useState<Client[]>(() => cachedClients ?? []);
+  const [projects, setProjects] = useState<Project[]>(() => cachedProjects ?? []);
+  const [statuses, setStatuses] = useState<string[]>(() => cachedProjectStatuses ?? []);
   const [clientId, setClientId] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState(() => cachedProjectStatuses?.[0] ?? "");
+  const [isLoading, setIsLoading] = useState(() => !cachedProjects);
+  const [isRefreshing, setIsRefreshing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
   async function fetchData() {
     setError("");
-    setIsLoading(true);
 
     try {
       const [clientsRes, projectsRes, statusesRes] = await Promise.all([
@@ -83,6 +91,9 @@ export function Projects() {
         api.get("/metadata/project-statuses"),
       ]);
 
+      setCache(clientsCacheKey, clientsRes.data);
+      setCache(projectsCacheKey, projectsRes.data);
+      setCache(projectStatusesCacheKey, statusesRes.data);
       setClients(clientsRes.data);
       setProjects(projectsRes.data);
       setStatuses(statusesRes.data);
@@ -91,6 +102,7 @@ export function Projects() {
       setError("Não foi possível carregar os projetos. Verifique se o backend está ativo.");
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }
 
@@ -135,10 +147,14 @@ export function Projects() {
     ])
       .then(([clientsRes, projectsRes, statusesRes]) => {
         if (!isMounted) return;
+        setCache(clientsCacheKey, clientsRes.data);
+        setCache(projectsCacheKey, projectsRes.data);
+        setCache(projectStatusesCacheKey, statusesRes.data);
         setClients(clientsRes.data);
         setProjects(projectsRes.data);
         setStatuses(statusesRes.data);
-        setStatus(statusesRes.data[0] || "DISCOVERY");
+        setStatus((currentStatus) => currentStatus || statusesRes.data[0] || "DISCOVERY");
+        setError("");
       })
       .catch(() => {
         if (!isMounted) return;
@@ -147,6 +163,7 @@ export function Projects() {
       .finally(() => {
         if (!isMounted) return;
         setIsLoading(false);
+        setIsRefreshing(false);
       });
 
     return () => {
@@ -222,7 +239,10 @@ export function Projects() {
       </div>
 
       <div className="panel">
-        <h2>Projetos cadastrados</h2>
+        <div className="panel-heading">
+          <h2>Projetos cadastrados</h2>
+          <span>{isRefreshing ? "Atualizando..." : `${projects.length} registros`}</span>
+        </div>
 
         {isLoading ? (
           <p className="muted" aria-live="polite">Carregando projetos...</p>

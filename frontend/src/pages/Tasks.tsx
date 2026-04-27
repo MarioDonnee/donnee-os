@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../services/api";
+import { getCache, setCache } from "../services/cache";
 
 type Project = {
   id: string;
@@ -25,6 +26,11 @@ type ActionLog = {
   status: "saving" | "saved" | "failed";
   timestamp: string;
 };
+
+const projectsCacheKey = "projects:list";
+const tasksCacheKey = "tasks:list";
+const taskStatusesCacheKey = "metadata:task-statuses";
+const taskPrioritiesCacheKey = "metadata:task-priorities";
 
 function getTaskStatusClass(status: string) {
   const normalized = status.toLowerCase();
@@ -65,16 +71,21 @@ function getPriorityClass(priority: string) {
 
 export function Tasks() {
   const actionLogCounter = useRef(0);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [statuses, setStatuses] = useState<string[]>([]);
-  const [priorities, setPriorities] = useState<string[]>([]);
+  const cachedProjects = getCache<Project[]>(projectsCacheKey);
+  const cachedTasks = getCache<Task[]>(tasksCacheKey);
+  const cachedTaskStatuses = getCache<string[]>(taskStatusesCacheKey);
+  const cachedTaskPriorities = getCache<string[]>(taskPrioritiesCacheKey);
+  const [projects, setProjects] = useState<Project[]>(() => cachedProjects ?? []);
+  const [tasks, setTasks] = useState<Task[]>(() => cachedTasks ?? []);
+  const [statuses, setStatuses] = useState<string[]>(() => cachedTaskStatuses ?? []);
+  const [priorities, setPriorities] = useState<string[]>(() => cachedTaskPriorities ?? []);
   const [projectId, setProjectId] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("");
+  const [priority, setPriority] = useState(() => cachedTaskPriorities?.[1] ?? cachedTaskPriorities?.[0] ?? "");
   const [dueDate, setDueDate] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !cachedTasks);
+  const [isRefreshing, setIsRefreshing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [draggingTaskId, setDraggingTaskId] = useState("");
   const [savingTaskId, setSavingTaskId] = useState("");
@@ -83,7 +94,6 @@ export function Tasks() {
 
   async function fetchData() {
     setError("");
-    setIsLoading(true);
 
     try {
       const [projectsRes, tasksRes, statusesRes, prioritiesRes] = await Promise.all([
@@ -93,6 +103,10 @@ export function Tasks() {
         api.get("/metadata/task-priorities"),
       ]);
 
+      setCache(projectsCacheKey, projectsRes.data);
+      setCache(tasksCacheKey, tasksRes.data);
+      setCache(taskStatusesCacheKey, statusesRes.data);
+      setCache(taskPrioritiesCacheKey, prioritiesRes.data);
       setProjects(projectsRes.data);
       setTasks(tasksRes.data);
       setStatuses(statusesRes.data);
@@ -102,6 +116,7 @@ export function Tasks() {
       setError("Não foi possível carregar as tarefas. Verifique se o backend está ativo.");
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }
 
@@ -231,6 +246,7 @@ export function Tasks() {
 
     setError("");
     setSavingTaskId(taskId);
+    setCache(tasksCacheKey, nextTasks);
     setTasks(nextTasks);
 
     const logId = addActionLog({
@@ -246,12 +262,17 @@ export function Tasks() {
         position: movedTask.position,
       });
       setTasks((currentTasks) =>
-        currentTasks.map((currentTask) =>
-          currentTask.id === taskId ? { ...currentTask, ...response.data } : currentTask,
-        ),
+        {
+          const updatedTasks = currentTasks.map((currentTask) =>
+            currentTask.id === taskId ? { ...currentTask, ...response.data } : currentTask,
+          );
+          setCache(tasksCacheKey, updatedTasks);
+          return updatedTasks;
+        },
       );
       updateActionLog(logId, "saved");
     } catch {
+      setCache(tasksCacheKey, previousTasks);
       setTasks(previousTasks);
       setError("Não foi possível salvar a mudança de status. A tarefa voltou ao estado anterior.");
       updateActionLog(logId, "failed");
@@ -272,11 +293,16 @@ export function Tasks() {
     ])
       .then(([projectsRes, tasksRes, statusesRes, prioritiesRes]) => {
         if (!isMounted) return;
+        setCache(projectsCacheKey, projectsRes.data);
+        setCache(tasksCacheKey, tasksRes.data);
+        setCache(taskStatusesCacheKey, statusesRes.data);
+        setCache(taskPrioritiesCacheKey, prioritiesRes.data);
         setProjects(projectsRes.data);
         setTasks(tasksRes.data);
         setStatuses(statusesRes.data);
         setPriorities(prioritiesRes.data);
-        setPriority(prioritiesRes.data[1] || prioritiesRes.data[0] || "MEDIUM");
+        setPriority((currentPriority) => currentPriority || prioritiesRes.data[1] || prioritiesRes.data[0] || "MEDIUM");
+        setError("");
       })
       .catch(() => {
         if (!isMounted) return;
@@ -285,6 +311,7 @@ export function Tasks() {
       .finally(() => {
         if (!isMounted) return;
         setIsLoading(false);
+        setIsRefreshing(false);
       });
 
     return () => {
@@ -375,7 +402,11 @@ export function Tasks() {
             <p className="row-detail">Arraste uma tarefa para outra coluna. A alteração é salva automaticamente.</p>
           </div>
           <span>
-            {savingTaskId ? "Salvando mudança..." : `${statuses.length} status disponíveis`}
+            {savingTaskId
+              ? "Salvando mudança..."
+              : isRefreshing
+                ? "Atualizando..."
+                : `${statuses.length} status disponíveis`}
           </span>
         </div>
 

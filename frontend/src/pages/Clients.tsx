@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../services/api";
+import { getCache, setCache } from "../services/cache";
 
 type Client = {
   id: string;
@@ -9,6 +10,9 @@ type Client = {
   main_contact_name?: string | null;
   main_contact_email?: string | null;
 };
+
+const clientsCacheKey = "clients:list";
+const clientStatusesCacheKey = "metadata:client-statuses";
 
 function getClientStatusClass(status: string) {
   const normalized = status.toLowerCase();
@@ -29,17 +33,21 @@ function getClientStatusClass(status: string) {
 }
 
 export function Clients() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [statuses, setStatuses] = useState<string[]>([]);
+  const cachedClients = getCache<Client[]>(clientsCacheKey);
+  const cachedClientStatuses = getCache<string[]>(clientStatusesCacheKey);
+  const [clients, setClients] = useState<Client[]>(() => cachedClients ?? []);
+  const [statuses, setStatuses] = useState<string[]>(() => cachedClientStatuses ?? []);
   const [name, setName] = useState("");
   const [segment, setSegment] = useState("");
-  const [status, setStatus] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState(() => cachedClientStatuses?.[0] ?? "");
+  const [isLoading, setIsLoading] = useState(() => !cachedClients);
+  const [isRefreshing, setIsRefreshing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
   async function fetchClients() {
     const response = await api.get("/clients");
+    setCache(clientsCacheKey, response.data);
     setClients(response.data);
   }
 
@@ -75,9 +83,12 @@ export function Clients() {
     ])
       .then(([clientsRes, statusesRes]) => {
         if (!isMounted) return;
+        setCache(clientsCacheKey, clientsRes.data);
+        setCache(clientStatusesCacheKey, statusesRes.data);
         setClients(clientsRes.data);
         setStatuses(statusesRes.data);
-        setStatus(statusesRes.data[0] || "LEAD");
+        setStatus((currentStatus) => currentStatus || statusesRes.data[0] || "LEAD");
+        setError("");
       })
       .catch(() => {
         if (!isMounted) return;
@@ -86,6 +97,7 @@ export function Clients() {
       .finally(() => {
         if (!isMounted) return;
         setIsLoading(false);
+        setIsRefreshing(false);
       });
 
     return () => {
@@ -147,7 +159,10 @@ export function Clients() {
       </div>
 
       <div className="panel">
-        <h2>Clientes cadastrados</h2>
+        <div className="panel-heading">
+          <h2>Clientes cadastrados</h2>
+          <span>{isRefreshing ? "Atualizando..." : `${clients.length} registros`}</span>
+        </div>
 
         {isLoading ? (
           <p className="muted" aria-live="polite">Carregando clientes...</p>

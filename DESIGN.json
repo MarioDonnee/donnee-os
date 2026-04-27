@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-04-27T00:48:30.0614293-03:00",
+  "title": "Design System: Donnée OS",
+  "extensions": {
+    "colorMeta": {
+      "night-root": {
+        "role": "neutral",
+        "displayName": "Night Root",
+        "canonical": "#050012",
+        "tonalRamp": ["#050012", "#09001b", "#100023", "#1d0638", "#32105a", "#55208f", "#7c2cff", "#d9c6ff"]
+      },
+      "violet-core": {
+        "role": "primary",
+        "displayName": "Violet Core",
+        "canonical": "#7c2cff",
+        "tonalRamp": ["#120326", "#22074a", "#391075", "#5520a8", "#7c2cff", "#9f63ff", "#c7a4ff", "#eadbff"]
+      },
+      "orchid-glow": {
+        "role": "primary",
+        "displayName": "Orchid Glow",
+        "canonical": "#d77cff",
+        "tonalRamp": ["#21052b", "#3a0d4b", "#601778", "#8d28ad", "#b653df", "#d77cff", "#e7b4ff", "#f6e3ff"]
+      },
+      "magenta-signal": {
+        "role": "primary",
+        "displayName": "Magenta Signal",
+        "canonical": "#c25cff",
+        "tonalRamp": ["#1e062b", "#360c4f", "#57127d", "#8121b8", "#a83ee4", "#c25cff", "#dda4ff", "#f3dcff"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page-level identity and screen orientation."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Operational text, row details and supporting copy."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Eyebrows and compact product context."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel-ambient",
+        "value": "0 20px 60px rgba(0, 0, 0, 0.35)",
+        "purpose": "Separates glass panels from the deep background."
+      },
+      {
+        "name": "brand-glow",
+        "value": "0 0 34px rgba(153, 64, 255, 0.55)",
+        "purpose": "Reserved for the brand mark and rare identity moments."
+      },
+      {
+        "name": "focus-glow",
+        "value": "0 0 0 3px rgba(124, 44, 255, 0.18)",
+        "purpose": "Accessible focus treatment for fields."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "180ms ease",
+        "purpose": "Navigation, button and focus state changes."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-adjust",
+        "value": "1180px"
+      },
+      {
+        "name": "mobile-shell",
+        "value": "820px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary creation action for forms.",
+      "html": "<button class=\"ds-button-primary\">Criar cliente</button>",
+      "css": ".ds-button-primary { padding: 13px 18px; border-radius: 14px; border: 1px solid rgba(215, 124, 255, 0.35); background: linear-gradient(90deg, #7c2cff, #d77cff); color: #f7f0ff; font-weight: 700; cursor: pointer; white-space: nowrap; transition: filter 180ms ease, opacity 180ms ease, transform 180ms ease; } .ds-button-primary:hover { filter: brightness(1.08); } .ds-button-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(124, 44, 255, 0.18); } .ds-button-primary:disabled { cursor: not-allowed; opacity: 0.52; filter: grayscale(0.25); }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Dark filled field for operational creation flows.",
+      "html": "<input class=\"ds-input\" placeholder=\"Nome do cliente\" />",
+      "css": ".ds-input { width: 100%; padding: 13px 15px; border-radius: 14px; border: 1px solid rgba(195, 132, 255, 0.22); background: rgba(12, 4, 28, 0.84); color: #f7f0ff; outline: none; } .ds-input::placeholder { color: rgba(216, 205, 236, 0.58); } .ds-input:focus { border-color: rgba(215, 124, 255, 0.65); box-shadow: 0 0 0 3px rgba(124, 44, 255, 0.18); }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Primary glass container for forms, lists and dashboard sections.",
+      "html": "<section class=\"ds-panel\"><h2>Novo cliente</h2><p>Cadastro e acompanhamento dos clientes.</p></section>",
+      "css": ".ds-panel { border: 1px solid rgba(195, 132, 255, 0.2); background: linear-gradient(180deg, rgba(23, 12, 51, 0.76), rgba(8, 4, 22, 0.84)); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); backdrop-filter: blur(18px); border-radius: 24px; padding: 24px; color: #f7f0ff; } .ds-panel h2 { margin: 0 0 12px; font-size: 20px; } .ds-panel p { margin: 0; color: #a99cc5; }"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill",
+      "description": "Compact operational status indicator.",
+      "html": "<span class=\"ds-status-pill\">ACTIVE</span>",
+      "css": ".ds-status-pill { display: inline-flex; align-items: center; min-height: 28px; padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(215, 124, 255, 0.24); background: rgba(124, 44, 255, 0.14); color: #eadbff; font-size: 12px; letter-spacing: 0.8px; }"
+    },
+    {
+      "name": "Sidebar Navigation Item",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Icon plus label route navigation with active violet surface.",
+      "html": "<a class=\"ds-nav-item ds-nav-item-active\" href=\"#\"><span>Dashboard</span></a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 10px; padding: 15px 18px; border-radius: 14px; color: #cfc2e8; text-decoration: none; transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease; } .ds-nav-item:hover, .ds-nav-item-active { color: #f7f0ff; background: linear-gradient(90deg, rgba(124, 44, 255, 0.55), rgba(215, 124, 255, 0.18)); box-shadow: inset 0 0 0 1px rgba(215, 124, 255, 0.35); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Intelligence Console",
+    "overview": "Donnée OS is a dark internal command surface for operational consulting work. It should feel premium, focused and slightly experimental, but the visual system must serve repeated use rather than spectacle.",
+    "keyCharacteristics": [
+      "Dark premium operating surface.",
+      "Purple-black tonal depth with rare bright accents.",
+      "Glass-like panels used as a deliberate brand material.",
+      "Compact, scan-friendly forms and rows.",
+      "Responsive shell that preserves navigation and operational context."
+    ],
+    "rules": [
+      {
+        "name": "The Signal Rarity Rule",
+        "body": "Bright violet and magenta are operational signals. Use them for active navigation, metrics, primary actions and status emphasis, not as general decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Dark Console Rule",
+        "body": "Screens should stay dark and focused. Light surfaces, white dashboards and blue enterprise themes are off-brand.",
+        "section": "colors"
+      },
+      {
+        "name": "The Dense Clarity Rule",
+        "body": "Typography must stay compact inside operational panels. Reserve large type for page-level orientation only.",
+        "section": "typography"
+      },
+      {
+        "name": "The Purposeful Glass Rule",
+        "body": "Glassmorphism is part of Donnée's identity here, but it must remain tied to real containers, not decorative floating cards.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep new screens inside the existing app shell, content, page-header, panel, row and form-row conventions.",
+      "Do pull statuses and priorities from metadata endpoints when available.",
+      "Do preserve the dark premium purple-black workspace.",
+      "Do use violet and magenta as operational signals, not background filler.",
+      "Do keep forms compact, readable and responsive."
+    ],
+    "donts": [
+      "Don't make Donnée OS look like a default Bootstrap admin panel.",
+      "Don't use generic SaaS template composition or CRM clone layouts.",
+      "Don't introduce bright corporate blue dashboards or flat white enterprise tables.",
+      "Don't add advanced AI, automation, billing, finance, ERP or complex workflow engines unless explicitly requested.",
+      "Don't use decorative effects that do not improve operational clarity."
+    ]
+  }
+}

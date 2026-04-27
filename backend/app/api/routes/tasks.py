@@ -4,11 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
+from app.schemas.task import TaskCreate, TaskMove, TaskResponse, TaskUpdate
 from app.services.task_service import (
     create_task,
     get_tasks,
     get_tasks_by_project,
+    move_task,
     update_task,
 )
 
@@ -39,3 +40,13 @@ def update(task_id: UUID, task: TaskUpdate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Task not found")
 
     return updated_task
+
+
+@router.patch("/{task_id}/move", response_model=TaskResponse)
+def move(task_id: UUID, task_move: TaskMove, db: Session = Depends(get_db)):
+    moved_task = move_task(db, task_id, task_move)
+
+    if not moved_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return moved_task

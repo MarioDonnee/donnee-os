@@ -157,6 +157,7 @@ create table if not exists tasks (
   description text,
   status task_status not null default 'BACKLOG',
   priority task_priority not null default 'MEDIUM',
+  position integer not null default 0,
   assignee_id uuid references users(id),
   due_date date,
   completed_at timestamptz,
@@ -168,6 +169,7 @@ create table if not exists tasks (
 
 create index if not exists idx_tasks_project_id on tasks(project_id);
 create index if not exists idx_tasks_status on tasks(status);
+create index if not exists idx_tasks_status_position on tasks(status, position);
 create index if not exists idx_tasks_priority on tasks(priority);
 create index if not exists idx_tasks_assignee_id on tasks(assignee_id);
 create index if not exists idx_tasks_due_date on tasks(due_date);

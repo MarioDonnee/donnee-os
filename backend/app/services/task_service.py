@@ -6,6 +6,15 @@ from app.models.task import Task
 from app.models.project import Project
 from app.services.activity_log_service import create_log
 
+VALID_TASK_STATUSES = {
+    "BACKLOG",
+    "IN_PROGRESS",
+    "REVIEW",
+    "BLOCKED",
+    "DONE",
+    "CANCELLED",
+}
+
 
 def create_task(db: Session, data):
     project = (
@@ -17,7 +26,13 @@ def create_task(db: Session, data):
     if not project:
         raise HTTPException(status_code=400, detail="Project does not exist")
 
-    task = Task(**data.model_dump())
+    next_position = (
+        db.query(Task)
+        .filter(Task.status == "BACKLOG", Task.deleted_at.is_(None))
+        .count()
+    )
+
+    task = Task(**data.model_dump(), position=next_position)
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -34,13 +49,19 @@ def create_task(db: Session, data):
 
 
 def get_tasks(db: Session):
-    return db.query(Task).filter(Task.deleted_at.is_(None)).all()
+    return (
+        db.query(Task)
+        .filter(Task.deleted_at.is_(None))
+        .order_by(Task.status.asc(), Task.position.asc(), Task.created_at.asc())
+        .all()
+    )
 
 
 def get_tasks_by_project(db: Session, project_id: UUID):
     return (
         db.query(Task)
         .filter(Task.project_id == project_id, Task.deleted_at.is_(None))
+        .order_by(Task.status.asc(), Task.position.asc(), Task.created_at.asc())
         .all()
     )
 
@@ -71,6 +92,7 @@ def update_task(db: Session, task_id: UUID, data):
         "title": task.title,
         "status": task.status,
         "priority": task.priority,
+        "position": task.position,
     }
 
     for field, value in update_data.items():
@@ -86,6 +108,99 @@ def update_task(db: Session, task_id: UUID, data):
         action="updated",
         old_value=old_data,
         new_value=data.model_dump(mode="json", exclude_unset=True),
+    )
+
+    return task
+
+
+def move_task(db: Session, task_id: UUID, data):
+    task = (
+        db.query(Task)
+        .filter(Task.id == task_id, Task.deleted_at.is_(None))
+        .first()
+    )
+
+    if not task:
+        return None
+
+    old_value = {
+        "status": task.status,
+        "position": task.position,
+    }
+
+    next_status = data.status
+    next_position = max(data.position, 0)
+
+    if next_status not in VALID_TASK_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid task status")
+
+    if task.status == next_status:
+        siblings = (
+            db.query(Task)
+            .filter(
+                Task.status == task.status,
+                Task.id != task.id,
+                Task.deleted_at.is_(None),
+            )
+            .order_by(Task.position.asc(), Task.created_at.asc())
+            .all()
+        )
+
+        bounded_position = min(next_position, len(siblings))
+        ordered_tasks = siblings[:bounded_position] + [task] + siblings[bounded_position:]
+
+        for index, current_task in enumerate(ordered_tasks):
+            current_task.position = index
+    else:
+        source_tasks = (
+            db.query(Task)
+            .filter(
+                Task.status == task.status,
+                Task.id != task.id,
+                Task.deleted_at.is_(None),
+            )
+            .order_by(Task.position.asc(), Task.created_at.asc())
+            .all()
+        )
+        destination_tasks = (
+            db.query(Task)
+            .filter(
+                Task.status == next_status,
+                Task.id != task.id,
+                Task.deleted_at.is_(None),
+            )
+            .order_by(Task.position.asc(), Task.created_at.asc())
+            .all()
+        )
+
+        for index, current_task in enumerate(source_tasks):
+            current_task.position = index
+
+        bounded_position = min(next_position, len(destination_tasks))
+        ordered_destination_tasks = (
+            destination_tasks[:bounded_position]
+            + [task]
+            + destination_tasks[bounded_position:]
+        )
+
+        task.status = next_status
+
+        for index, current_task in enumerate(ordered_destination_tasks):
+            current_task.position = index
+
+    db.commit()
+    db.refresh(task)
+
+    create_log(
+        db=db,
+        entity_type="task",
+        entity_id=task.id,
+        action="moved",
+        old_value=old_value,
+        new_value={
+            "status": task.status,
+            "position": task.position,
+        },
     )
 
     return task

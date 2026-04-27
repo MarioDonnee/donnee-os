@@ -14,10 +14,13 @@ class TaskCreate(BaseModel):
 
 class TaskResponse(BaseModel):
     id: UUID
+    project_id: UUID
     title: str
     description: Optional[str]
     status: str
     priority: str
+    position: int
+    due_date: Optional[date]
 
     class Config:
         from_attributes = True
@@ -30,3 +33,8 @@ class TaskUpdate(BaseModel):
     priority: Optional[str] = None
     assignee_id: Optional[UUID] = None
     due_date: Optional[date] = None
+
+
+class TaskMove(BaseModel):
+    status: str
+    position: int

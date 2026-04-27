@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, Date
+from sqlalchemy import Column, String, Text, Date, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
@@ -18,6 +18,7 @@ class Task(Base):
 
     status = Column(String, nullable=False, default="BACKLOG")
     priority = Column(String, nullable=False, default="MEDIUM")
+    position = Column(Integer, nullable=False, default=0)
 
     assignee_id = Column(UUID(as_uuid=True))
 

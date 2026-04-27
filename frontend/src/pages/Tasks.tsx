@@ -8,11 +8,12 @@ type Project = {
 
 type Task = {
   id: string;
-  project_id?: string;
+  project_id: string;
   title: string;
   description?: string | null;
   status: string;
   priority: string;
+  position: number;
   due_date?: string | null;
 };
 
@@ -140,7 +141,9 @@ export function Tasks() {
   }
 
   function getTasksByStatus(taskStatus: string) {
-    return tasks.filter((task) => task.status === taskStatus);
+    return tasks
+      .filter((task) => task.status === taskStatus)
+      .sort((a, b) => a.position - b.position);
   }
 
   function addActionLog(log: Omit<ActionLog, "id" | "timestamp">) {
@@ -167,31 +170,81 @@ export function Tasks() {
     );
   }
 
-  async function moveTask(taskId: string, nextStatus: string) {
+  function getNextTasksAfterMove(taskId: string, nextStatus: string, nextPosition: number) {
+    const movingTask = tasks.find((task) => task.id === taskId);
+
+    if (!movingTask) return tasks;
+
+    const sourceStatus = movingTask.status;
+    const sourceTasks = tasks
+      .filter((task) => task.status === sourceStatus && task.id !== taskId)
+      .sort((a, b) => a.position - b.position)
+      .map((task, index) => ({ ...task, position: index }));
+
+    const destinationTasks = tasks
+      .filter((task) => task.status === nextStatus && task.id !== taskId)
+      .sort((a, b) => a.position - b.position);
+
+    const boundedPosition = Math.max(0, Math.min(nextPosition, destinationTasks.length));
+    const movedTask = { ...movingTask, status: nextStatus, position: boundedPosition };
+    const orderedDestinationTasks = [
+      ...destinationTasks.slice(0, boundedPosition),
+      movedTask,
+      ...destinationTasks.slice(boundedPosition),
+    ].map((task, index) => ({ ...task, position: index }));
+
+    if (sourceStatus === nextStatus) {
+      return tasks.map((task) =>
+        task.status === nextStatus
+          ? orderedDestinationTasks.find((destinationTask) => destinationTask.id === task.id) ?? task
+          : task,
+      );
+    }
+
+    return tasks.map((task) => {
+      if (task.status === sourceStatus && task.id !== taskId) {
+        return sourceTasks.find((sourceTask) => sourceTask.id === task.id) ?? task;
+      }
+
+      if (task.status === nextStatus || task.id === taskId) {
+        return orderedDestinationTasks.find((destinationTask) => destinationTask.id === task.id) ?? task;
+      }
+
+      return task;
+    });
+  }
+
+  async function moveTask(taskId: string, nextStatus: string, nextPosition: number) {
     const task = tasks.find((currentTask) => currentTask.id === taskId);
 
-    if (!task || task.status === nextStatus || savingTaskId) return;
+    if (!task || savingTaskId) return;
 
     const previousStatus = task.status;
+    const previousPosition = task.position;
     const previousTasks = tasks;
+    const nextTasks = getNextTasksAfterMove(taskId, nextStatus, nextPosition);
+    const movedTask = nextTasks.find((currentTask) => currentTask.id === taskId);
+
+    if (!movedTask || (previousStatus === movedTask.status && previousPosition === movedTask.position)) {
+      return;
+    }
 
     setError("");
     setSavingTaskId(taskId);
-    setTasks((currentTasks) =>
-      currentTasks.map((currentTask) =>
-        currentTask.id === taskId ? { ...currentTask, status: nextStatus } : currentTask,
-      ),
-    );
+    setTasks(nextTasks);
 
     const logId = addActionLog({
       taskTitle: task.title,
-      from: previousStatus,
-      to: nextStatus,
+      from: `${previousStatus} #${previousPosition + 1}`,
+      to: `${movedTask.status} #${movedTask.position + 1}`,
       status: "saving",
     });
 
     try {
-      const response = await api.patch(`/tasks/${taskId}`, { status: nextStatus });
+      const response = await api.patch(`/tasks/${taskId}/move`, {
+        status: movedTask.status,
+        position: movedTask.position,
+      });
       setTasks((currentTasks) =>
         currentTasks.map((currentTask) =>
           currentTask.id === taskId ? { ...currentTask, ...response.data } : currentTask,
@@ -345,7 +398,7 @@ export function Tasks() {
                     onDrop={(event) => {
                       event.preventDefault();
                       const taskId = event.dataTransfer.getData("text/plain") || draggingTaskId;
-                      moveTask(taskId, taskStatus);
+                      moveTask(taskId, taskStatus, columnTasks.length);
                     }}
                   >
                     <div className="kanban-column-header">
@@ -372,6 +425,14 @@ export function Tasks() {
                             event.dataTransfer.setData("text/plain", task.id);
                             setDraggingTaskId(task.id);
                           }}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            const draggedTaskId = event.dataTransfer.getData("text/plain") || draggingTaskId;
+                            const targetPosition = columnTasks.findIndex((columnTask) => columnTask.id === task.id);
+                            moveTask(draggedTaskId, task.status, targetPosition);
+                          }}
                         >
                           <div className="task-card-header">
                             <strong>{task.title}</strong>
@@ -394,7 +455,10 @@ export function Tasks() {
                             <select
                               disabled={Boolean(savingTaskId)}
                               value={task.status}
-                              onChange={(event) => moveTask(task.id, event.target.value)}
+                              onChange={(event) => {
+                                const destinationTasks = getTasksByStatus(event.target.value);
+                                moveTask(task.id, event.target.value, destinationTasks.length);
+                              }}
                             >
                               {statuses.map((availableStatus) => (
                                 <option key={availableStatus} value={availableStatus}>

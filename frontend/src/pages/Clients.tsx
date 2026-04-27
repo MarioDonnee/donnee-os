@@ -10,6 +10,24 @@ type Client = {
   main_contact_email?: string | null;
 };
 
+function getClientStatusClass(status: string) {
+  const normalized = status.toLowerCase();
+
+  if (normalized.includes("active") || normalized.includes("ativo")) {
+    return "status-done";
+  }
+
+  if (normalized.includes("paused") || normalized.includes("blocked") || normalized.includes("risk")) {
+    return "status-blocked";
+  }
+
+  if (normalized.includes("closed") || normalized.includes("cancel")) {
+    return "status-cancelled";
+  }
+
+  return "status-backlog";
+}
+
 export function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
@@ -26,7 +44,7 @@ export function Clients() {
   }
 
   async function createClient() {
-    if (!name.trim()) return;
+    if (!name.trim() || !status) return;
 
     setError("");
     setIsSaving(true);
@@ -122,7 +140,7 @@ export function Clients() {
             </select>
           </label>
 
-          <button disabled={isSaving || !name.trim()} onClick={createClient}>
+          <button disabled={isSaving || !name.trim() || !status} onClick={createClient}>
             {isSaving ? "Criando..." : "Criar cliente"}
           </button>
         </div>
@@ -136,18 +154,26 @@ export function Clients() {
         ) : clients.length === 0 ? (
           <p className="empty-state">Nenhum cliente cadastrado ainda.</p>
         ) : (
-          clients.map((client) => (
-            <div className="row" key={client.id}>
-              <div>
-                <strong>{client.name}</strong>
-                <p className="row-detail">
-                  {client.segment || "Sem segmento informado"}
-                </p>
-              </div>
+          <div className="entity-list">
+            {clients.map((client) => (
+              <article className="entity-card" key={client.id}>
+                <div>
+                  <strong>{client.name}</strong>
+                  <div className="entity-meta">
+                    <span className="meta-chip">{client.segment || "Sem segmento informado"}</span>
+                    {client.main_contact_email && (
+                      <span className="meta-chip">{client.main_contact_email}</span>
+                    )}
+                  </div>
+                </div>
 
-              <strong className="status-pill">{client.status}</strong>
-            </div>
-          ))
+                <strong className={`status-pill ${getClientStatusClass(client.status)}`}>
+                  {client.status}
+                </strong>
+                <button className="ghost-action" type="button">Ver</button>
+              </article>
+            ))}
+          </div>
         )}
       </div>
     </section>

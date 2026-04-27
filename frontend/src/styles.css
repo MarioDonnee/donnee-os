@@ -435,6 +435,21 @@ h1 {
   font-size: 17px;
 }
 
+.refresh-indicator {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 28px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 5px 10px;
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.07);
+  color: #bae6fd;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .quick-actions {
   position: relative;
   z-index: 1;
@@ -511,6 +526,28 @@ h1 {
   margin-top: 12px;
   color: var(--color-text-muted);
   font-size: 12px;
+}
+
+.metric-card.is-loading .metric-value,
+.metric-card.is-loading .metric-title,
+.metric-card.is-loading small {
+  color: transparent;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(180, 194, 214, 0.08), rgba(180, 194, 214, 0.18), rgba(180, 194, 214, 0.08));
+  background-size: 220% 100%;
+  animation: skeleton-pulse 1400ms ease-in-out infinite;
+}
+
+.metric-card.is-loading .metric-value {
+  width: 72px;
+}
+
+.metric-card.is-loading .metric-title {
+  width: 92px;
+}
+
+.metric-card.is-loading small {
+  width: 116px;
 }
 
 .metric-violet .metric-icon {
@@ -597,6 +634,31 @@ h1 {
   display: block;
   height: 100%;
   border-radius: inherit;
+}
+
+.skeleton-row {
+  grid-template-columns: minmax(120px, 0.8fr) minmax(140px, 1fr) 28px;
+}
+
+.skeleton-line,
+.skeleton-dot {
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(180, 194, 214, 0.07), rgba(180, 194, 214, 0.16), rgba(180, 194, 214, 0.07));
+  background-size: 220% 100%;
+  animation: skeleton-pulse 1400ms ease-in-out infinite;
+}
+
+.skeleton-line {
+  height: 12px;
+}
+
+.skeleton-line-short {
+  max-width: 160px;
+}
+
+.skeleton-dot {
+  width: 28px;
+  height: 12px;
 }
 
 .status-dot,
@@ -1205,6 +1267,16 @@ button:disabled {
 
 .task-action-failed .signal-marker {
   background: var(--color-red);
+}
+
+@keyframes skeleton-pulse {
+  from {
+    background-position: 120% 0;
+  }
+
+  to {
+    background-position: -120% 0;
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {

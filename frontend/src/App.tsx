@@ -1,16 +1,37 @@
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import { BriefcaseBusiness, LayoutDashboard, ListTodo, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Dashboard } from "./pages/Dashboard";
 import { Clients } from "./pages/Clients";
 import { Projects } from "./pages/Projects";
 import { Tasks } from "./pages/Tasks";
 import "./styles.css";
 
-const navItems = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/clients", label: "Clientes", icon: Users },
-  { to: "/projects", label: "Projetos", icon: BriefcaseBusiness },
-  { to: "/tasks", label: "Tarefas", icon: ListTodo },
+type NavItem = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const navItems: NavGroup[] = [
+  {
+    label: "Command",
+    items: [{ to: "/", label: "Dashboard", icon: LayoutDashboard, end: true }],
+  },
+  {
+    label: "Operação",
+    items: [
+      { to: "/clients", label: "Clientes", icon: Users },
+      { to: "/projects", label: "Projetos", icon: BriefcaseBusiness },
+      { to: "/tasks", label: "Tarefas", icon: ListTodo },
+    ],
+  },
 ];
 
 function Layout() {
@@ -27,23 +48,38 @@ function Layout() {
         </div>
 
         <nav aria-label="Navegação principal">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              className={({ isActive }) => (isActive ? "active" : undefined)}
-              end={end}
-              key={to}
-              to={to}
-            >
-              <Icon size={18} />
-              <span>{label}</span>
-            </NavLink>
+          {navItems.map((group) => (
+            <div className="nav-group" key={group.label}>
+              <span className="nav-group-label">{group.label}</span>
+              {group.items.map(({ to, label, icon: Icon, end }) => (
+                <NavLink
+                  className={({ isActive }) => (isActive ? "active" : undefined)}
+                  end={end}
+                  key={to}
+                  to={to}
+                >
+                  <Icon size={18} />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
-        <div className="tagline">
-          DESENVOLVEMOS SOLUÇÕES.
-          <br />
-          IMPULSIONAMOS INTELIGÊNCIA.
+        <div className="sidebar-footer">
+          <div className="user-card">
+            <span className="user-avatar">DM</span>
+            <div>
+              <strong>Donnée Core</strong>
+              <small>Operational Intelligence</small>
+            </div>
+          </div>
+
+          <div className="tagline">
+            DESENVOLVEMOS SOLUÇÕES.
+            <br />
+            IMPULSIONAMOS INTELIGÊNCIA.
+          </div>
         </div>
       </aside>
 

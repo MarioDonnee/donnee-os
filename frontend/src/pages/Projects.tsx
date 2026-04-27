@@ -17,6 +17,49 @@ type Project = {
   health_score?: number | null;
 };
 
+function getProjectStatusClass(status: string) {
+  const normalized = status.toLowerCase();
+
+  if (normalized.includes("done") || normalized.includes("delivered") || normalized.includes("complete")) {
+    return "status-done";
+  }
+
+  if (normalized.includes("blocked") || normalized.includes("risk") || normalized.includes("paused")) {
+    return "status-blocked";
+  }
+
+  if (normalized.includes("review") || normalized.includes("validation")) {
+    return "status-review";
+  }
+
+  if (normalized.includes("progress") || normalized.includes("active") || normalized.includes("execution")) {
+    return "status-progress";
+  }
+
+  if (normalized.includes("cancel") || normalized.includes("closed")) {
+    return "status-cancelled";
+  }
+
+  return "status-backlog";
+}
+
+function getPriorityClass(priority: string) {
+  const normalized = priority.toLowerCase();
+
+  if (normalized.includes("urgent")) return "priority-urgent";
+  if (normalized.includes("high")) return "priority-high";
+  if (normalized.includes("medium")) return "priority-medium";
+  if (normalized.includes("low")) return "priority-low";
+
+  return "status-backlog";
+}
+
+function getHealthClass(score: number) {
+  if (score >= 80) return "health-good";
+  if (score >= 50) return "health-warning";
+  return "health-risk";
+}
+
 export function Projects() {
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -52,7 +95,7 @@ export function Projects() {
   }
 
   async function createProject() {
-    if (!clientId || !name.trim()) return;
+    if (!clientId || !name.trim() || !status) return;
 
     setError("");
     setIsSaving(true);
@@ -161,7 +204,7 @@ export function Projects() {
             />
           </label>
 
-          <button disabled={isSaving || !clientId || !name.trim()} onClick={createProject}>
+          <button disabled={isSaving || !clientId || !name.trim() || !status} onClick={createProject}>
             {isSaving ? "Criando..." : "Criar projeto"}
           </button>
         </div>
@@ -186,23 +229,42 @@ export function Projects() {
         ) : projects.length === 0 ? (
           <p className="empty-state">Nenhum projeto cadastrado ainda.</p>
         ) : (
-          projects.map((project) => (
-            <div className="row" key={project.id}>
-              <div>
-                <strong>{project.name}</strong>
-                <p className="row-detail">
-                  {getClientName(project.client_id)}
-                </p>
-              </div>
+          <div className="project-grid">
+            {projects.map((project) => (
+              <article className="entity-card project-card" key={project.id}>
+                <div className="project-card-header">
+                  <div>
+                    <strong>{project.name}</strong>
+                    <p className="row-detail">{getClientName(project.client_id)}</p>
+                  </div>
 
-              <div className="row-meta">
-                <strong className="status-pill">{project.status}</strong>
-                <p className="row-detail">
-                  Prioridade: {project.priority}
-                </p>
-              </div>
-            </div>
-          ))
+                  <strong className={`status-pill ${getProjectStatusClass(project.status)}`}>
+                    {project.status}
+                  </strong>
+                </div>
+
+                <div className="entity-meta">
+                  <span className={`status-pill ${getPriorityClass(project.priority)}`}>
+                    {project.priority}
+                  </span>
+                  {project.description && <span className="meta-chip">{project.description}</span>}
+                </div>
+
+                <div className="health-meter" aria-label={`Health score ${project.health_score ?? 0}`}>
+                  <div className="health-meter-label">
+                    <span>Health score</span>
+                    <strong>{project.health_score ?? 0}%</strong>
+                  </div>
+                  <div className="health-track">
+                    <span
+                      className={`health-fill ${getHealthClass(project.health_score ?? 0)}`}
+                      style={{ width: `${Math.max(0, Math.min(project.health_score ?? 0, 100))}%` }}
+                    />
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
         )}
       </div>
     </section>

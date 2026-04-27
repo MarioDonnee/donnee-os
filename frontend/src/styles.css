@@ -169,3 +169,37 @@ h1 {
 .row strong {
   color: #c25cff;
 }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+}
+
+input {
+  padding: 13px 15px;
+  border-radius: 14px;
+  border: 1px solid rgba(195, 132, 255, 0.22);
+  background: rgba(12, 4, 28, 0.84);
+  color: #f7f0ff;
+  outline: none;
+}
+
+input:focus {
+  border-color: rgba(215, 124, 255, 0.65);
+  box-shadow: 0 0 0 3px rgba(124, 44, 255, 0.18);
+}
+
+button {
+  padding: 13px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(215, 124, 255, 0.35);
+  background: linear-gradient(90deg, #7c2cff, #d77cff);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.08);
+}

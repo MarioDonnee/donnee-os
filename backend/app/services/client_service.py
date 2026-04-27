@@ -4,8 +4,13 @@ from sqlalchemy.orm import Session
 from app.models.client import Client
 
 
-def create_client(db: Session, data):
-    client = Client(**data.model_dump())
+def create_client(db: Session, data, current_user=None):
+    client_data = data.model_dump()
+
+    if current_user:
+        client_data["created_by"] = current_user.id
+
+    client = Client(**client_data)
     db.add(client)
     db.commit()
     db.refresh(client)

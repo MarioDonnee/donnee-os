@@ -1,8 +1,12 @@
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
-import { BriefcaseBusiness, LayoutDashboard, ListTodo, Users } from "lucide-react";
+import { BrowserRouter, Routes, Route, NavLink, Outlet } from "react-router-dom";
+import { BriefcaseBusiness, LayoutDashboard, ListTodo, LogOut, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { AuthProvider } from "./auth/AuthProvider";
+import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { useAuth } from "./auth/useAuth";
 import { Dashboard } from "./pages/Dashboard";
 import { Clients } from "./pages/Clients";
+import { Login } from "./pages/Login";
 import { Projects } from "./pages/Projects";
 import { Tasks } from "./pages/Tasks";
 import "./styles.css";
@@ -35,6 +39,8 @@ const navItems: NavGroup[] = [
 ];
 
 function Layout() {
+  const { currentUser, signOut } = useAuth();
+
   return (
     <main className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -68,12 +74,24 @@ function Layout() {
 
         <div className="sidebar-footer">
           <div className="user-card">
-            <span className="user-avatar">DM</span>
+            <span className="user-avatar">
+              {currentUser?.name
+                .split(" ")
+                .map((part) => part[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase() || "DO"}
+            </span>
             <div>
-              <strong>Donnée Core</strong>
-              <small>Operational Intelligence</small>
+              <strong>{currentUser?.name || "Donnée Core"}</strong>
+              <small>{currentUser?.role || "Operational Intelligence"}</small>
             </div>
           </div>
+
+          <button className="ghost-action sidebar-logout" type="button" onClick={signOut}>
+            <LogOut size={15} />
+            Sair
+          </button>
 
           <div className="tagline">
             DESENVOLVEMOS SOLUÇÕES.
@@ -84,12 +102,7 @@ function Layout() {
       </aside>
 
       <div className="route-slot" id="main-content" tabIndex={-1}>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/clients" element={<Clients />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/tasks" element={<Tasks />} />
-        </Routes>
+        <Outlet />
       </div>
     </main>
   );
@@ -98,7 +111,19 @@ function Layout() {
 function App() {
   return (
     <BrowserRouter>
-      <Layout />
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="clients" element={<Clients />} />
+              <Route path="projects" element={<Projects />} />
+              <Route path="tasks" element={<Tasks />} />
+            </Route>
+          </Route>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

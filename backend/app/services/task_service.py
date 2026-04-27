@@ -16,7 +16,7 @@ VALID_TASK_STATUSES = {
 }
 
 
-def create_task(db: Session, data):
+def create_task(db: Session, data, current_user=None):
     project = (
         db.query(Project)
         .filter(Project.id == data.project_id, Project.deleted_at.is_(None))
@@ -32,7 +32,12 @@ def create_task(db: Session, data):
         .count()
     )
 
-    task = Task(**data.model_dump(), position=next_position)
+    task_data = data.model_dump()
+
+    if current_user:
+        task_data["created_by"] = current_user.id
+
+    task = Task(**task_data, position=next_position)
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -42,7 +47,8 @@ def create_task(db: Session, data):
         entity_type="task",
         entity_id=task.id,
         action="created",
-        new_value=data.model_dump(mode="json"),
+        new_value={**data.model_dump(mode="json"), "position": task.position},
+        user_id=current_user.id if current_user else None,
     )
 
     return task
@@ -66,7 +72,7 @@ def get_tasks_by_project(db: Session, project_id: UUID):
     )
 
 
-def update_task(db: Session, task_id: UUID, data):
+def update_task(db: Session, task_id: UUID, data, current_user=None):
     task = (
         db.query(Task)
         .filter(Task.id == task_id, Task.deleted_at.is_(None))
@@ -108,12 +114,13 @@ def update_task(db: Session, task_id: UUID, data):
         action="updated",
         old_value=old_data,
         new_value=data.model_dump(mode="json", exclude_unset=True),
+        user_id=current_user.id if current_user else None,
     )
 
     return task
 
 
-def move_task(db: Session, task_id: UUID, data):
+def move_task(db: Session, task_id: UUID, data, current_user=None):
     task = (
         db.query(Task)
         .filter(Task.id == task_id, Task.deleted_at.is_(None))
@@ -201,6 +208,7 @@ def move_task(db: Session, task_id: UUID, data):
             "status": task.status,
             "position": task.position,
         },
+        user_id=current_user.id if current_user else None,
     )
 
     return task

@@ -73,6 +73,7 @@ $$ language plpgsql;
 
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid unique,
   name text not null,
   email text not null unique,
   role user_role not null default 'ANALYST',
@@ -81,6 +82,8 @@ create table if not exists users (
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
+
+create index if not exists idx_users_auth_user_id on users(auth_user_id);
 
 create trigger trg_users_updated_at
 before update on users

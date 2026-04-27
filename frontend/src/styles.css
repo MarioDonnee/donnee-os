@@ -1053,6 +1053,83 @@ button:disabled {
   filter: none;
 }
 
+.sidebar-logout {
+  width: 100%;
+  justify-content: center;
+}
+
+.login-shell,
+.auth-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.auth-loading {
+  color: var(--color-text-soft);
+}
+
+.login-panel {
+  width: min(480px, 100%);
+  display: grid;
+  gap: 28px;
+  padding: 34px;
+  border: 1px solid var(--panel-border);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(23, 29, 41, 0.9), rgba(11, 15, 23, 0.96)),
+    var(--color-panel);
+  box-shadow: var(--panel-shadow);
+}
+
+.login-brand {
+  margin-bottom: 0;
+}
+
+.login-panel h1 {
+  font-size: 52px;
+}
+
+.login-panel p:not(.eyebrow) {
+  color: var(--color-text-soft);
+  line-height: 1.6;
+}
+
+.login-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.access-denied {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(251, 113, 133, 0.32);
+  border-radius: 18px;
+  background: rgba(80, 17, 34, 0.42);
+  color: #ffe4e6;
+}
+
+.access-denied svg {
+  margin-top: 2px;
+}
+
+.access-denied strong {
+  display: block;
+}
+
+.access-denied p {
+  margin: 5px 0 0;
+}
+
+.login-secondary-action {
+  justify-content: center;
+}
+
 .project-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

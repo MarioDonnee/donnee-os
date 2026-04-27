@@ -6,7 +6,7 @@ from app.models.project import Project
 from app.models.client import Client
 
 
-def create_project(db: Session, data):
+def create_project(db: Session, data, current_user=None):
     client = (
         db.query(Client)
         .filter(Client.id == data.client_id, Client.deleted_at.is_(None))
@@ -16,7 +16,12 @@ def create_project(db: Session, data):
     if not client:
         raise HTTPException(status_code=400, detail="Client does not exist")
 
-    project = Project(**data.model_dump())
+    project_data = data.model_dump()
+
+    if current_user:
+        project_data["created_by"] = current_user.id
+
+    project = Project(**project_data)
     db.add(project)
     db.commit()
     db.refresh(project)

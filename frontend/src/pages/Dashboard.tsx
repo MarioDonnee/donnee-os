@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { api } from "../services/api";
-import { Briefcase, CheckCircle, Clock, FolderKanban, Users } from "lucide-react";
+import {
+  Briefcase,
+  CheckCircle,
+  Clock,
+  FolderKanban,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 type DashboardSummary = {
   total_clients: number;
@@ -20,7 +27,7 @@ function MetricCard({
 }: {
   title: string;
   value: number;
-  icon: any;
+  icon: LucideIcon;
 }) {
   return (
     <div className="glass-card">
@@ -35,15 +42,29 @@ function MetricCard({
 
 export function Dashboard() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    api.get("/dashboard/summary").then((response) => {
-      setSummary(response.data);
-    });
+    api
+      .get("/dashboard/summary")
+      .then((response) => {
+        setSummary(response.data);
+      })
+      .catch(() => {
+        setError("Não foi possível carregar o dashboard. Verifique se o backend está ativo.");
+      });
   }, []);
 
+  if (error) {
+    return (
+      <section className="content">
+        <div className="error-banner">{error}</div>
+      </section>
+    );
+  }
+
   if (!summary) {
-    return <section className="content">Carregando...</section>;
+    return <section className="content loading-state">Carregando dashboard...</section>;
   }
 
   return (

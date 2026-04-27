@@ -12,8 +12,13 @@ type Client = {
 
 export function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [statuses, setStatuses] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [segment, setSegment] = useState("");
+  const [status, setStatus] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function fetchClients() {
     const response = await api.get("/clients");
@@ -23,19 +28,51 @@ export function Clients() {
   async function createClient() {
     if (!name.trim()) return;
 
-    await api.post("/clients", {
-      name,
-      segment: segment || null,
-      status: "LEAD",
-    });
+    setError("");
+    setIsSaving(true);
 
-    setName("");
-    setSegment("");
-    fetchClients();
+    try {
+      await api.post("/clients", {
+        name,
+        segment: segment || null,
+        status: status || statuses[0] || "LEAD",
+      });
+
+      setName("");
+      setSegment("");
+      await fetchClients();
+    } catch {
+      setError("Não foi possível criar o cliente.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   useEffect(() => {
-    fetchClients();
+    let isMounted = true;
+
+    Promise.all([
+      api.get("/clients"),
+      api.get("/metadata/client-statuses"),
+    ])
+      .then(([clientsRes, statusesRes]) => {
+        if (!isMounted) return;
+        setClients(clientsRes.data);
+        setStatuses(statusesRes.data);
+        setStatus(statusesRes.data[0] || "LEAD");
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setError("Não foi possível carregar os clientes. Verifique se o backend está ativo.");
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -46,42 +83,69 @@ export function Clients() {
         <p>Cadastro e acompanhamento dos clientes da operação.</p>
       </header>
 
-      <div className="panel" style={{ marginBottom: 24 }}>
+      {error && (
+        <div className="error-banner" role="alert">
+          {error}
+        </div>
+      )}
+
+      <div className="panel panel-spaced">
         <h2>Novo cliente</h2>
 
         <div className="form-row">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nome do cliente"
-          />
+          <label className="field">
+            <span>Nome do cliente</span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex.: Acme Analytics"
+            />
+          </label>
 
-          <input
-            value={segment}
-            onChange={(e) => setSegment(e.target.value)}
-            placeholder="Segmento"
-          />
+          <label className="field">
+            <span>Segmento</span>
+            <input
+              value={segment}
+              onChange={(e) => setSegment(e.target.value)}
+              placeholder="Ex.: Inteligência comercial"
+            />
+          </label>
 
-          <button onClick={createClient}>Criar cliente</button>
+          <label className="field">
+            <span>Status</span>
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              {statuses.map((clientStatus) => (
+                <option key={clientStatus} value={clientStatus}>
+                  {clientStatus}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button disabled={isSaving || !name.trim()} onClick={createClient}>
+            {isSaving ? "Criando..." : "Criar cliente"}
+          </button>
         </div>
       </div>
 
       <div className="panel">
         <h2>Clientes cadastrados</h2>
 
-        {clients.length === 0 ? (
-          <p>Nenhum cliente cadastrado ainda.</p>
+        {isLoading ? (
+          <p className="muted" aria-live="polite">Carregando clientes...</p>
+        ) : clients.length === 0 ? (
+          <p className="empty-state">Nenhum cliente cadastrado ainda.</p>
         ) : (
           clients.map((client) => (
             <div className="row" key={client.id}>
               <div>
                 <strong>{client.name}</strong>
-                <p style={{ margin: "6px 0 0", color: "#a99cc5" }}>
+                <p className="row-detail">
                   {client.segment || "Sem segmento informado"}
                 </p>
               </div>
 
-              <strong>{client.status}</strong>
+              <strong className="status-pill">{client.status}</strong>
             </div>
           ))
         )}

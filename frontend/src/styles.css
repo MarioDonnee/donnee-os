@@ -238,6 +238,20 @@ button:active {
   font-weight: 900;
 }
 
+.user-avatar-sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.team-member-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .user-card strong,
 .user-card small {
   display: block;

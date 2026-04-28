@@ -14,6 +14,21 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+type OverdueTaskItem = {
+  id: string;
+  title: string;
+  project_name: string;
+  due_date: string | null;
+};
+
+type ActivityItem = {
+  id: string;
+  entity_type: string;
+  action: string;
+  performed_by_name: string | null;
+  performed_at: string | null;
+};
+
 type DashboardSummary = {
   total_clients: number;
   total_projects: number;
@@ -23,6 +38,8 @@ type DashboardSummary = {
   overdue_tasks: number;
   tasks_by_status: Record<string, number>;
   tasks_by_priority: Record<string, number>;
+  overdue_tasks_list: OverdueTaskItem[];
+  recent_activity: ActivityItem[];
 };
 
 const emptySummary: DashboardSummary = {
@@ -34,6 +51,8 @@ const emptySummary: DashboardSummary = {
   overdue_tasks: 0,
   tasks_by_status: {},
   tasks_by_priority: {},
+  overdue_tasks_list: [],
+  recent_activity: [],
 };
 
 let cachedDashboardSummary: DashboardSummary | null = null;
@@ -47,17 +66,38 @@ type MetricCardProps = {
   isLoading?: boolean;
 };
 
-const recentActivity = [
-  "Projeto Aura recebeu nova tarefa crítica",
-  "Cliente Atlas avançou para ACTIVE",
-  "Resumo operacional recalculado",
-];
+function formatRelativeTime(iso: string | null): string {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m atrás`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h atrás`;
+  const days = Math.floor(hours / 24);
+  return `${days}d atrás`;
+}
 
-const overdueTasks = [
-  { title: "Revisar diagnóstico inicial", project: "Projeto Aura", age: "2 dias" },
-  { title: "Enviar plano de ação", project: "Cliente Atlas", age: "4 dias" },
-  { title: "Validar métricas de entrega", project: "Operação interna", age: "1 semana" },
-];
+function formatOverdueAge(iso: string | null): string {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "hoje";
+  if (days === 1) return "1 dia";
+  if (days < 7) return `${days} dias`;
+  const weeks = Math.floor(days / 7);
+  return weeks === 1 ? "1 semana" : `${weeks} semanas`;
+}
+
+function getActivityLabel(action: string, entityType: string): string {
+  const labels: Record<string, string> = {
+    created: `${entityType} criado`,
+    updated: `${entityType} atualizado`,
+    moved: "Tarefa movida",
+    comment_created: "Comentário adicionado",
+    checklist_item_completed: "Checklist concluído",
+  };
+  return labels[action] ?? action.replace(/_/g, " ");
+}
 
 function getStatusTone(status: string) {
   const normalized = status.toLowerCase();
@@ -294,35 +334,59 @@ export function Dashboard() {
           </div>
 
           <div className="signal-list">
-            {overdueTasks.map((task) => (
-              <div className="signal-item" key={task.title}>
-                <span className="signal-marker tone-red" />
-                <div>
-                  <strong>{task.title}</strong>
-                  <p className="row-detail">{task.project}</p>
+            {isInitialLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div className="signal-item skeleton-row" key={i}>
+                  <div className="skeleton-dot" />
+                  <div style={{ flex: 1 }}><div className="skeleton-line" /></div>
                 </div>
-                <small>{task.age}</small>
-              </div>
-            ))}
+              ))
+            ) : visibleSummary.overdue_tasks_list.length === 0 ? (
+              <p className="empty-state">Nenhuma tarefa em atraso.</p>
+            ) : (
+              visibleSummary.overdue_tasks_list.map((task) => (
+                <div className="signal-item" key={task.id}>
+                  <span className="signal-marker tone-red" />
+                  <div>
+                    <strong>{task.title}</strong>
+                    <p className="row-detail">{task.project_name}</p>
+                  </div>
+                  <small>{formatOverdueAge(task.due_date)}</small>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
         <div className="panel activity-panel">
           <div className="panel-heading">
             <h2>Atividade recente</h2>
-            <span>mock API-ready</span>
+            <span>ao vivo</span>
           </div>
 
           <div className="activity-stream">
-            {recentActivity.map((activity, index) => (
-              <div className="activity-item" key={activity}>
-                <Radio size={15} />
-                <div>
-                  <strong>{activity}</strong>
-                  <p className="row-detail">{index + 1}h atrás</p>
+            {isInitialLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div className="activity-item skeleton-row" key={i}>
+                  <div className="skeleton-dot" />
+                  <div style={{ flex: 1 }}><div className="skeleton-line" /></div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : visibleSummary.recent_activity.length === 0 ? (
+              <p className="empty-state">Nenhuma atividade registrada ainda.</p>
+            ) : (
+              visibleSummary.recent_activity.map((item) => (
+                <div className="activity-item" key={item.id}>
+                  <Radio size={15} />
+                  <div>
+                    <strong>{getActivityLabel(item.action, item.entity_type)}</strong>
+                    <p className="row-detail">
+                      {item.performed_by_name ?? "Sistema"} · {formatRelativeTime(item.performed_at)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, health, db_test, clients, projects, tasks, dashboard, metadata, comments, labels, checklists
+from app.api.routes import auth, health, db_test, clients, projects, tasks, dashboard, metadata, comments, labels, checklists, users
 
 app = FastAPI(
     title="Donnée OS API",
@@ -32,3 +32,4 @@ app.include_router(labels.router, tags=["Labels"])
 app.include_router(checklists.router, tags=["Checklists"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 app.include_router(metadata.router, prefix="/metadata", tags=["Metadata"])
+app.include_router(users.router, prefix="/users", tags=["Users"])

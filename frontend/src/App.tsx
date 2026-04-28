@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink, Outlet } from "react-router-dom";
-import { BriefcaseBusiness, LayoutDashboard, ListTodo, LogOut, Table2, User2, Users } from "lucide-react";
+import { BriefcaseBusiness, LayoutDashboard, ListTodo, LogOut, Table2, User2, UserCog, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
@@ -10,6 +10,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { InactiveAccess } from "./pages/InactiveAccess";
 import { Login } from "./pages/Login";
 import { MyWork } from "./pages/MyWork";
+import { Team } from "./pages/Team";
 import { PendingAccess } from "./pages/PendingAccess";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { Projects } from "./pages/Projects";
@@ -35,6 +36,7 @@ const navItems: NavGroup[] = [
     items: [
       { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
       { to: "/my-work", label: "Meu Trabalho", icon: User2 },
+      { to: "/team", label: "Equipe", icon: UserCog },
     ],
   },
   {
@@ -137,6 +139,7 @@ function App() {
               <Route path="tasks" element={<Tasks />} />
               <Route path="tasks/table" element={<TasksTable />} />
               <Route path="my-work" element={<MyWork />} />
+              <Route path="team" element={<Team />} />
             </Route>
           </Route>
         </Routes>

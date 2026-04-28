@@ -1,7 +1,9 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from uuid import UUID
-from datetime import date
+from datetime import date, datetime
+
+from app.schemas.label import LabelResponse
 
 
 class TaskCreate(BaseModel):
@@ -20,7 +22,14 @@ class TaskResponse(BaseModel):
     status: str
     priority: str
     position: int
+    assignee_id: Optional[UUID]
     due_date: Optional[date]
+    created_by: Optional[UUID]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+    labels: list[LabelResponse] = Field(default_factory=list)
+    checklist_total: int = 0
+    checklist_done: int = 0
 
     class Config:
         from_attributes = True

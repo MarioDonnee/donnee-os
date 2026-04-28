@@ -22,3 +22,12 @@ def create_log(
 
     db.add(log)
     db.commit()
+
+
+def get_logs_for_entity(db: Session, entity_type: str, entity_id):
+    return (
+        db.query(ActivityLog)
+        .filter(ActivityLog.entity_type == entity_type, ActivityLog.entity_id == entity_id)
+        .order_by(ActivityLog.performed_at.desc())
+        .all()
+    )

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink, Outlet } from "react-router-dom";
-import { BriefcaseBusiness, LayoutDashboard, ListTodo, LogOut, Users } from "lucide-react";
+import { BriefcaseBusiness, LayoutDashboard, ListTodo, LogOut, Table2, User2, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
@@ -9,10 +9,12 @@ import { Clients } from "./pages/Clients";
 import { Dashboard } from "./pages/Dashboard";
 import { InactiveAccess } from "./pages/InactiveAccess";
 import { Login } from "./pages/Login";
+import { MyWork } from "./pages/MyWork";
 import { PendingAccess } from "./pages/PendingAccess";
 import { ProjectDetail } from "./pages/ProjectDetail";
 import { Projects } from "./pages/Projects";
 import { Tasks } from "./pages/Tasks";
+import { TasksTable } from "./pages/TasksTable";
 import "./styles.css";
 
 type NavItem = {
@@ -30,14 +32,18 @@ type NavGroup = {
 const navItems: NavGroup[] = [
   {
     label: "Command",
-    items: [{ to: "/", label: "Dashboard", icon: LayoutDashboard, end: true }],
+    items: [
+      { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+      { to: "/my-work", label: "Meu Trabalho", icon: User2 },
+    ],
   },
   {
     label: "Operação",
     items: [
       { to: "/clients", label: "Clientes", icon: Users },
       { to: "/projects", label: "Projetos", icon: BriefcaseBusiness },
-      { to: "/tasks", label: "Tarefas", icon: ListTodo },
+      { to: "/tasks", label: "Kanban", icon: ListTodo },
+      { to: "/tasks/table", label: "Tabela", icon: Table2 },
     ],
   },
 ];
@@ -129,6 +135,8 @@ function App() {
               <Route path="projects" element={<Projects />} />
               <Route path="projects/:projectId" element={<ProjectDetail />} />
               <Route path="tasks" element={<Tasks />} />
+              <Route path="tasks/table" element={<TasksTable />} />
+              <Route path="my-work" element={<MyWork />} />
             </Route>
           </Route>
         </Routes>

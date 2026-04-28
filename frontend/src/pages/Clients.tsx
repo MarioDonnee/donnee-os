@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { getCache, setCache } from "../services/cache";
 
@@ -33,6 +34,7 @@ function getClientStatusClass(status: string) {
 }
 
 export function Clients() {
+  const navigate = useNavigate();
   const cachedClients = getCache<Client[]>(clientsCacheKey);
   const cachedClientStatuses = getCache<string[]>(clientStatusesCacheKey);
   const [clients, setClients] = useState<Client[]>(() => cachedClients ?? []);
@@ -185,7 +187,7 @@ export function Clients() {
                 <strong className={`status-pill ${getClientStatusClass(client.status)}`}>
                   {client.status}
                 </strong>
-                <button className="ghost-action" type="button">Ver</button>
+                <button className="ghost-action" type="button" onClick={() => navigate(`/clients/${client.id}`)}>Ver</button>
               </article>
             ))}
           </div>

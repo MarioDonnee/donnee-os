@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles
 from app.db.session import get_db
+from app.schemas.activity_log import ActivityLogResponse
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.services.activity_log_service import get_logs_for_entity
 from app.services.project_service import (
     create_project,
     get_projects,
@@ -48,3 +50,13 @@ def update(project_id: UUID, project: ProjectUpdate, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="Project not found")
 
     return updated_project
+
+
+@router.get("/{project_id}/activity", response_model=list[ActivityLogResponse])
+def get_activity(project_id: UUID, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER"))):
+    project = get_project_by_id(db, project_id)
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    return get_logs_for_entity(db, "project", project_id)

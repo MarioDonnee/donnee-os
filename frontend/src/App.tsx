@@ -4,11 +4,13 @@ import type { LucideIcon } from "lucide-react";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { useAuth } from "./auth/useAuth";
-import { Dashboard } from "./pages/Dashboard";
+import { ClientDetail } from "./pages/ClientDetail";
 import { Clients } from "./pages/Clients";
+import { Dashboard } from "./pages/Dashboard";
 import { InactiveAccess } from "./pages/InactiveAccess";
 import { Login } from "./pages/Login";
 import { PendingAccess } from "./pages/PendingAccess";
+import { ProjectDetail } from "./pages/ProjectDetail";
 import { Projects } from "./pages/Projects";
 import { Tasks } from "./pages/Tasks";
 import "./styles.css";
@@ -123,7 +125,9 @@ function App() {
             <Route element={<Layout />}>
               <Route index element={<Dashboard />} />
               <Route path="clients" element={<Clients />} />
+              <Route path="clients/:clientId" element={<ClientDetail />} />
               <Route path="projects" element={<Projects />} />
+              <Route path="projects/:projectId" element={<ProjectDetail />} />
               <Route path="tasks" element={<Tasks />} />
             </Route>
           </Route>

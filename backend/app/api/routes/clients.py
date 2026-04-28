@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles
 from app.db.session import get_db
+from app.schemas.activity_log import ActivityLogResponse
 from app.schemas.client import ClientCreate, ClientUpdate, ClientResponse
+from app.services.activity_log_service import get_logs_for_entity
 from app.services.client_service import (
     create_client,
     get_clients,
@@ -44,3 +46,13 @@ def update(client_id: UUID, client: ClientUpdate, db: Session = Depends(get_db),
         raise HTTPException(status_code=404, detail="Client not found")
 
     return updated_client
+
+
+@router.get("/{client_id}/activity", response_model=list[ActivityLogResponse])
+def get_activity(client_id: UUID, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER"))):
+    client = get_client_by_id(db, client_id)
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    return get_logs_for_entity(db, "client", client_id)

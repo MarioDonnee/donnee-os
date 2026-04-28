@@ -1945,3 +1945,342 @@ button:disabled {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ─── Sprint 4 · Detail Pages ─────────────────────────────────────── */
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 0 20px;
+  transition: color 140ms;
+}
+
+.back-link:hover {
+  color: var(--color-text-primary);
+}
+
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.detail-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.detail-header-badges {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 6px;
+}
+
+.detail-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: -8px 0 20px;
+}
+
+.detail-notes {
+  font-size: 14px;
+  color: var(--color-text-soft);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.panel-compact {
+  padding: 14px 20px;
+}
+
+.contact-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Summary cards */
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--color-panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: var(--color-text-muted);
+}
+
+.summary-card div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary-card strong {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.summary-card span {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.summary-card-risk {
+  border-color: rgba(251, 113, 133, 0.3);
+  color: var(--color-red);
+}
+
+.summary-card-risk strong {
+  color: var(--color-red);
+}
+
+.summary-pct {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-cyan);
+  min-width: 40px;
+}
+
+/* Clickable entity card */
+
+.entity-card-link {
+  cursor: pointer;
+  transition: border-color 140ms, background 140ms;
+}
+
+.entity-card-link:hover {
+  border-color: var(--panel-border-strong);
+  background: var(--color-panel-strong);
+}
+
+.entity-card-link:focus-visible {
+  outline: 2px solid var(--color-violet-core);
+  outline-offset: 2px;
+}
+
+/* Inline link button */
+
+.inline-link {
+  background: none;
+  border: none;
+  color: var(--color-cyan);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: none;
+  transition: color 140ms;
+}
+
+.inline-link:hover {
+  color: var(--color-orchid-glow);
+}
+
+/* Inline create row */
+
+.inline-create-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.inline-create-row input {
+  flex: 1;
+  background: var(--color-field);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  padding: 8px 12px;
+}
+
+.inline-create-row input:focus {
+  outline: none;
+  border-color: var(--color-violet-core);
+}
+
+/* Project kanban (read-only scoped view) */
+
+.project-kanban {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.project-kanban-col {
+  min-width: 160px;
+}
+
+.kanban-col-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+
+.kanban-col-count {
+  margin-left: auto;
+  background: var(--color-panel-strong);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.kanban-col-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kanban-col-empty {
+  font-size: 13px;
+  color: var(--color-muted-signal);
+  margin: 0;
+  padding: 8px 0;
+}
+
+/* Status dots for kanban headers */
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot-backlog { background: var(--color-muted-signal); }
+.status-dot-in_progress { background: var(--color-blue); }
+.status-dot-review { background: var(--color-amber); }
+.status-dot-blocked { background: var(--color-red); }
+.status-dot-done { background: var(--color-green); }
+
+/* Mini task cards in project kanban */
+
+.mini-task-card {
+  background: var(--color-panel-strong);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mini-task-overdue {
+  border-color: rgba(251, 113, 133, 0.35);
+}
+
+.mini-task-title {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.mini-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.status-pill-xs {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+.meta-chip-xs {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+/* Activity list */
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--panel-border);
+  font-size: 13px;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-action {
+  color: var(--color-text-soft);
+  text-transform: capitalize;
+}
+
+.activity-time {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .summary-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .project-kanban {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .summary-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .project-kanban {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+}

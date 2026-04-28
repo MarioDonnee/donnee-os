@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { getCache, setCache } from "../services/cache";
 
@@ -66,6 +67,7 @@ function getHealthClass(score: number) {
 }
 
 export function Projects() {
+  const navigate = useNavigate();
   const cachedClients = getCache<Client[]>(clientsCacheKey);
   const cachedProjects = getCache<Project[]>(projectsCacheKey);
   const cachedProjectStatuses = getCache<string[]>(projectStatusesCacheKey);
@@ -251,7 +253,14 @@ export function Projects() {
         ) : (
           <div className="project-grid">
             {projects.map((project) => (
-              <article className="entity-card project-card" key={project.id}>
+              <article
+                className="entity-card project-card entity-card-link"
+                key={project.id}
+                onClick={() => navigate(`/projects/${project.id}`)}
+                onKeyDown={(e) => e.key === "Enter" && navigate(`/projects/${project.id}`)}
+                role="button"
+                tabIndex={0}
+              >
                 <div className="project-card-header">
                   <div>
                     <strong>{project.name}</strong>

@@ -817,7 +817,6 @@ export function Tasks() {
       updateActionLog(logId, "failed");
     } finally {
       setSavingTaskId("");
-      setDraggingTaskId("");
     }
   }
 
@@ -1045,7 +1044,7 @@ export function Tasks() {
                       event.preventDefault();
                       setDraggingOverColumn("");
                       const taskId = event.dataTransfer.getData("text/plain") || draggingTaskId;
-                      moveTask(taskId, taskStatus, columnTasks.length);
+                      requestAnimationFrame(() => moveTask(taskId, taskStatus, columnTasks.length));
                     }}
                   >
                     <div className="kanban-column-header">
@@ -1085,7 +1084,7 @@ export function Tasks() {
                             event.stopPropagation();
                             const draggedTaskId = event.dataTransfer.getData("text/plain") || draggingTaskId;
                             const targetPosition = columnTasks.findIndex((columnTask) => columnTask.id === task.id);
-                            moveTask(draggedTaskId, task.status, targetPosition);
+                            requestAnimationFrame(() => moveTask(draggedTaskId, task.status, targetPosition));
                           }}
                           role="button"
                           tabIndex={0}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "../auth/useAuth";
 import { api } from "../services/api";
 import { getCache, setCache } from "../services/cache";
@@ -189,6 +189,7 @@ export function Tasks() {
   const [isRefreshing, setIsRefreshing] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [draggingTaskId, setDraggingTaskId] = useState("");
+  const [draggingOverColumn, setDraggingOverColumn] = useState("");
   const [savingTaskId, setSavingTaskId] = useState("");
   const [actionLogs, setActionLogs] = useState<ActionLog[]>([]);
   const [error, setError] = useState("");
@@ -215,6 +216,7 @@ export function Tasks() {
   const [editingChecklistTitle, setEditingChecklistTitle] = useState("");
   const [editingChecklistDueDate, setEditingChecklistDueDate] = useState("");
   const [filterSearch, setFilterSearch] = useState("");
+  const [debouncedFilterSearch, setDebouncedFilterSearch] = useState("");
   const [filterProjectId, setFilterProjectId] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterPriority, setFilterPriority] = useState("");
@@ -236,17 +238,21 @@ export function Tasks() {
       || filterOnlyMine,
   );
 
-  function getTaskFilterParams() {
-    return {
-      project_id: filterProjectId || undefined,
-      status: filterStatus || undefined,
-      priority: filterPriority || undefined,
-      label_id: filterLabelId || undefined,
-      overdue: filterOverdue || undefined,
-      search: filterSearch.trim() || undefined,
-      only_mine: filterOnlyMine || undefined,
-    };
-  }
+  // Debounce search: update debouncedFilterSearch 300ms after the last keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedFilterSearch(filterSearch), 300);
+    return () => clearTimeout(timer);
+  }, [filterSearch]);
+
+  const getTaskFilterParams = useCallback(() => ({
+    project_id: filterProjectId || undefined,
+    status: filterStatus || undefined,
+    priority: filterPriority || undefined,
+    label_id: filterLabelId || undefined,
+    overdue: filterOverdue || undefined,
+    search: debouncedFilterSearch.trim() || undefined,
+    only_mine: filterOnlyMine || undefined,
+  }), [filterProjectId, filterStatus, filterPriority, filterLabelId, filterOverdue, debouncedFilterSearch, filterOnlyMine]);
 
   async function fetchData() {
     setError("");
@@ -825,7 +831,7 @@ export function Tasks() {
     return () => {
       isMounted = false;
     };
-  }, [filterSearch, filterProjectId, filterStatus, filterPriority, filterLabelId, filterOverdue, filterOnlyMine]);
+  }, [debouncedFilterSearch, filterProjectId, filterStatus, filterPriority, filterLabelId, filterOverdue, filterOnlyMine]);
 
   return (
     <section className="content">
@@ -1026,11 +1032,18 @@ export function Tasks() {
 
                 return (
                   <section
-                    className={`kanban-column ${isDropTarget ? "kanban-column-target" : ""}`}
+                    className={`kanban-column ${isDropTarget ? "kanban-column-target" : ""} ${draggingOverColumn === taskStatus ? "kanban-column-hover" : ""}`}
                     key={taskStatus}
                     onDragOver={(event) => event.preventDefault()}
+                    onDragEnter={() => setDraggingOverColumn(taskStatus)}
+                    onDragLeave={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                        setDraggingOverColumn("");
+                      }
+                    }}
                     onDrop={(event) => {
                       event.preventDefault();
+                      setDraggingOverColumn("");
                       const taskId = event.dataTransfer.getData("text/plain") || draggingTaskId;
                       moveTask(taskId, taskStatus, columnTasks.length);
                     }}

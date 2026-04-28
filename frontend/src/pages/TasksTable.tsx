@@ -68,6 +68,7 @@ export function TasksTable() {
   const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterPriority, setFilterPriority] = useState("");
   const [filterProjectId, setFilterProjectId] = useState("");
@@ -76,6 +77,11 @@ export function TasksTable() {
   const [sortKey, setSortKey] = useState<SortKey>("updated_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [editingCell, setEditingCell] = useState<{ taskId: string; field: "status" | "priority" } | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Load metadata once
   useEffect(() => {
@@ -98,7 +104,7 @@ export function TasksTable() {
     if (filterPriority) params.set("priority", filterPriority);
     if (filterProjectId) params.set("project_id", filterProjectId);
     if (filterOverdue) params.set("overdue", "true");
-    if (search) params.set("search", search);
+    if (debouncedSearch) params.set("search", debouncedSearch);
 
     api.get(`/tasks?${params}`)
       .then((res) => { if (isMounted) setTasks(res.data); })
@@ -106,7 +112,7 @@ export function TasksTable() {
       .finally(() => { if (isMounted) setIsLoadingTasks(false); });
 
     return () => { isMounted = false; };
-  }, [filterStatus, filterPriority, filterProjectId, filterOverdue, search]);
+  }, [filterStatus, filterPriority, filterProjectId, filterOverdue, debouncedSearch]);
 
   const projectMap = useMemo(() => {
     const m: Record<string, Project> = {};

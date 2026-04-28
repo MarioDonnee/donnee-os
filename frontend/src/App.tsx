@@ -6,7 +6,9 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { useAuth } from "./auth/useAuth";
 import { Dashboard } from "./pages/Dashboard";
 import { Clients } from "./pages/Clients";
+import { InactiveAccess } from "./pages/InactiveAccess";
 import { Login } from "./pages/Login";
+import { PendingAccess } from "./pages/PendingAccess";
 import { Projects } from "./pages/Projects";
 import { Tasks } from "./pages/Tasks";
 import "./styles.css";
@@ -84,7 +86,8 @@ function Layout() {
             </span>
             <div>
               <strong>{currentUser?.name || "Donnée Core"}</strong>
-              <small>{currentUser?.role || "Operational Intelligence"}</small>
+              <small>{currentUser?.email || "Operational Intelligence"}</small>
+              <small>{currentUser?.role || "Role"}</small>
             </div>
           </div>
 
@@ -114,6 +117,8 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/access-pending" element={<PendingAccess />} />
+          <Route path="/access-inactive" element={<InactiveAccess />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route index element={<Dashboard />} />

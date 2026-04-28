@@ -4,6 +4,7 @@ from fastapi import HTTPException
 
 from app.models.project import Project
 from app.models.client import Client
+from app.services.activity_log_service import create_log
 
 
 def create_project(db: Session, data, current_user=None):
@@ -25,6 +26,16 @@ def create_project(db: Session, data, current_user=None):
     db.add(project)
     db.commit()
     db.refresh(project)
+
+    create_log(
+        db=db,
+        entity_type="project",
+        entity_id=project.id,
+        action="created",
+        new_value=data.model_dump(mode="json"),
+        user_id=current_user.id if current_user else None,
+    )
+
     return project
 
 
@@ -45,13 +56,21 @@ def get_project_by_id(db: Session, project_id: UUID):
     )
 
 
-def update_project(db: Session, project_id: UUID, data):
+def update_project(db: Session, project_id: UUID, data, current_user=None):
     project = get_project_by_id(db, project_id)
 
     if not project:
         return None
 
     update_data = data.model_dump(exclude_unset=True)
+
+    old_value = {
+        "client_id": str(project.client_id) if project.client_id else None,
+        "name": project.name,
+        "status": project.status,
+        "priority": project.priority,
+        "health_score": project.health_score,
+    }
 
     if "client_id" in update_data:
         client = (
@@ -68,4 +87,15 @@ def update_project(db: Session, project_id: UUID, data):
 
     db.commit()
     db.refresh(project)
+
+    create_log(
+        db=db,
+        entity_type="project",
+        entity_id=project.id,
+        action="updated",
+        old_value=old_value,
+        new_value=data.model_dump(mode="json", exclude_unset=True),
+        user_id=current_user.id if current_user else None,
+    )
+
     return project

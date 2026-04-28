@@ -15,3 +15,24 @@ api.interceptors.request.use(async (config) => {
 
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const code = error.response?.data?.detail?.code;
+
+    if ((status === 401 || status === 403) && code !== "INSUFFICIENT_ROLE") {
+      window.dispatchEvent(
+        new CustomEvent("donnee:auth-error", {
+          detail: {
+            status,
+            detail: error.response?.data?.detail,
+          },
+        }),
+      );
+    }
+
+    return Promise.reject(error);
+  },
+);

@@ -13,6 +13,13 @@ from app.models.user import User
 
 security = HTTPBearer(auto_error=False)
 
+ROLE_PERMISSIONS = {
+    "ADMIN": {"ADMIN", "MANAGER", "ANALYST", "VIEWER"},
+    "MANAGER": {"MANAGER", "ANALYST", "VIEWER"},
+    "ANALYST": {"ANALYST", "VIEWER"},
+    "VIEWER": {"VIEWER"},
+}
+
 
 def get_supabase_user(token: str):
     request = Request(
@@ -62,7 +69,58 @@ def get_current_user(
             db.commit()
             db.refresh(user)
 
-    if not user or user.status != "ACTIVE":
-        raise HTTPException(status_code=403, detail="User is not authorized")
+    if not user:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "USER_NOT_ALLOWLISTED",
+                "message": "User is not authorized",
+            },
+        )
+
+    if user.status == "PENDING":
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "USER_PENDING",
+                "message": "User access is pending approval",
+            },
+        )
+
+    if user.status == "INACTIVE":
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "USER_INACTIVE",
+                "message": "User access is inactive",
+            },
+        )
+
+    if user.status != "ACTIVE":
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "USER_NOT_AUTHORIZED",
+                "message": "User is not authorized",
+            },
+        )
 
     return user
+
+
+def require_roles(*allowed_roles: str):
+    def dependency(current_user: User = Depends(get_current_user)):
+        effective_roles = ROLE_PERMISSIONS.get(current_user.role, {current_user.role})
+
+        if not effective_roles.intersection(set(allowed_roles)):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "INSUFFICIENT_ROLE",
+                    "message": "User role cannot perform this action",
+                },
+            )
+
+        return current_user
+
+    return dependency

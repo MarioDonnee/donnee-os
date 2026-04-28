@@ -10,9 +10,20 @@ export type CurrentUser = {
   status: string;
 };
 
+export type AuthAccessStatus =
+  | "checking"
+  | "authenticated"
+  | "unauthenticated"
+  | "pending"
+  | "inactive"
+  | "unauthorized"
+  | "invalid"
+  | "backend_unavailable";
+
 export type AuthContextValue = {
   currentUser: CurrentUser | null;
   authError: string;
+  accessStatus: AuthAccessStatus;
   session: Session | null;
   isLoading: boolean;
   clearAuthError: () => void;

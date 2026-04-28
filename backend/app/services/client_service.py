@@ -2,6 +2,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.client import Client
+from app.services.activity_log_service import create_log
 
 
 def create_client(db: Session, data, current_user=None):
@@ -14,6 +15,16 @@ def create_client(db: Session, data, current_user=None):
     db.add(client)
     db.commit()
     db.refresh(client)
+
+    create_log(
+        db=db,
+        entity_type="client",
+        entity_id=client.id,
+        action="created",
+        new_value=data.model_dump(mode="json"),
+        user_id=current_user.id if current_user else None,
+    )
+
     return client
 
 
@@ -29,15 +40,35 @@ def get_client_by_id(db: Session, client_id: UUID):
     )
 
 
-def update_client(db: Session, client_id: UUID, data):
+def update_client(db: Session, client_id: UUID, data, current_user=None):
     client = get_client_by_id(db, client_id)
 
     if not client:
         return None
 
-    for field, value in data.model_dump(exclude_unset=True).items():
+    old_value = {
+        "name": client.name,
+        "segment": client.segment,
+        "status": client.status,
+        "owner_id": str(client.owner_id) if client.owner_id else None,
+    }
+
+    update_data = data.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
         setattr(client, field, value)
 
     db.commit()
     db.refresh(client)
+
+    create_log(
+        db=db,
+        entity_type="client",
+        entity_id=client.id,
+        action="updated",
+        old_value=old_value,
+        new_value=data.model_dump(mode="json", exclude_unset=True),
+        user_id=current_user.id if current_user else None,
+    )
+
     return client

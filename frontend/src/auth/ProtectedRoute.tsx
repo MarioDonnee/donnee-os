@@ -2,10 +2,18 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./useAuth";
 
 export function ProtectedRoute() {
-  const { authError, currentUser, isLoading, session } = useAuth();
+  const { accessStatus, authError, currentUser, isLoading, session } = useAuth();
 
   if (isLoading) {
     return <main className="auth-loading">Validando sessão...</main>;
+  }
+
+  if (accessStatus === "pending") {
+    return <Navigate replace to="/access-pending" />;
+  }
+
+  if (accessStatus === "inactive") {
+    return <Navigate replace to="/access-inactive" />;
   }
 
   if (authError) {

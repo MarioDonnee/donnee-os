@@ -130,6 +130,18 @@ function formatDate(value?: string | null) {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(value));
 }
 
+function isPastDue(value?: string | null) {
+  if (!value) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const dueDate = new Date(value);
+  dueDate.setHours(0, 0, 0, 0);
+
+  return dueDate < today;
+}
+
 function formatDateTime(value?: string | null) {
   if (!value) return "agora";
 
@@ -1109,12 +1121,17 @@ export function Tasks() {
                           tabIndex={0}
                         >
                           <div className="task-card-header">
-                            <strong>{task.title}</strong>
+                            <strong className="task-card-title">{task.title}</strong>
                             <span className={`status-pill ${getPriorityClass(task.priority)}`}>
                               {task.priority}
                             </span>
                           </div>
-                          <p className="row-detail">{getProjectName(task)}</p>
+                          <div className="task-card-meta">
+                            <span>{getProjectName(task)}</span>
+                            <span className={isPastDue(task.due_date) && task.status !== "DONE" ? "due-chip due-chip-late" : "due-chip"}>
+                              {task.due_date ? formatDate(task.due_date) : "Sem prazo"}
+                            </span>
+                          </div>
                           {(task.labels || []).length > 0 && (
                             <div className="label-chip-list">
                               {(task.labels || []).map((label) => (
@@ -1137,34 +1154,10 @@ export function Tasks() {
                               </div>
                             </div>
                           )}
-                          <div className="task-card-footer">
-                            <span className={`status-pill ${getTaskStatusClass(task.status)}`}>
-                              {task.status}
-                            </span>
-                            <span className="meta-chip">
-                              Prazo: {task.due_date || "não informado"}
-                            </span>
+                          <div className="task-card-footer" aria-hidden="true">
+                            <span className="drag-affordance" />
+                            {savingTaskId === task.id && <span>Salvando</span>}
                           </div>
-
-                          <label className="status-move-control">
-                            <span>Mover para</span>
-                            <select
-                              disabled={Boolean(savingTaskId)}
-                              value={task.status}
-                              onClick={(event) => event.stopPropagation()}
-                              onChange={(event) => {
-                                event.stopPropagation();
-                                const destinationTasks = getTasksByStatus(event.target.value);
-                                moveTask(task.id, event.target.value, destinationTasks.length);
-                              }}
-                            >
-                              {statuses.map((availableStatus) => (
-                                <option key={availableStatus} value={availableStatus}>
-                                  {availableStatus}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
                         </article>
                       ))
                     )}

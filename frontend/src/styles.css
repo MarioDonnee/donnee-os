@@ -1612,11 +1612,13 @@ button:disabled {
 
 .task-card {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   padding: 14px;
   border: 1px solid rgba(180, 194, 214, 0.12);
   border-radius: 16px;
-  background: rgba(17, 22, 32, 0.74);
+  background:
+    linear-gradient(180deg, rgba(23, 29, 41, 0.76), rgba(12, 16, 24, 0.88)),
+    rgba(17, 22, 32, 0.74);
   cursor: grab;
   transition:
     border-color 180ms ease,
@@ -1655,10 +1657,66 @@ button:disabled {
   color: var(--color-text-primary);
 }
 
+.task-card-title {
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.task-card-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.task-card-meta > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.due-chip {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border: 1px solid rgba(180, 194, 214, 0.12);
+  border-radius: 999px;
+  background: rgba(180, 194, 214, 0.07);
+  color: var(--color-text-soft);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.due-chip-late {
+  border-color: rgba(251, 113, 133, 0.38);
+  background: rgba(251, 113, 133, 0.12);
+  color: #fecdd3;
+}
+
 .task-card-footer {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 7px;
+  min-height: 18px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.drag-affordance {
+  width: 22px;
+  height: 6px;
+  border-top: 2px dotted rgba(180, 194, 214, 0.32);
+  border-bottom: 2px dotted rgba(180, 194, 214, 0.32);
+  opacity: 0.82;
 }
 
 .checklist-card-progress,
@@ -1758,27 +1816,6 @@ button:disabled {
   border-color: rgba(244, 114, 182, 0.34);
   background: rgba(244, 114, 182, 0.11);
   color: #fbcfe8;
-}
-
-.status-move-control {
-  display: grid;
-  gap: 7px;
-  padding-top: 2px;
-}
-
-.status-move-control span {
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-}
-
-.status-move-control select {
-  min-height: 36px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  font-size: 13px;
 }
 
 .task-log-panel {

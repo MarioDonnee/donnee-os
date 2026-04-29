@@ -15,13 +15,34 @@ type Project = {
   description?: string | null;
   status: string;
   priority: string;
+  start_date?: string | null;
   due_date?: string | null;
   health_score?: number | null;
+};
+
+type ProjectTemplateTask = {
+  id: string;
+  title: string;
+  description?: string | null;
+  status: string;
+  priority: string;
+  position: number;
+  due_offset_days?: number | null;
+};
+
+type ProjectTemplate = {
+  id: string;
+  name: string;
+  description?: string | null;
+  service_type: string;
+  estimated_days: number;
+  tasks: ProjectTemplateTask[];
 };
 
 const clientsCacheKey = "clients:list";
 const projectsCacheKey = "projects:list";
 const projectStatusesCacheKey = "metadata:project-statuses";
+const projectTemplatesCacheKey = "project-templates:list";
 
 function getProjectStatusClass(status: string) {
   const normalized = status.toLowerCase();
@@ -71,12 +92,17 @@ export function Projects() {
   const cachedClients = getCache<Client[]>(clientsCacheKey);
   const cachedProjects = getCache<Project[]>(projectsCacheKey);
   const cachedProjectStatuses = getCache<string[]>(projectStatusesCacheKey);
+  const cachedProjectTemplates = getCache<ProjectTemplate[]>(projectTemplatesCacheKey);
   const [clients, setClients] = useState<Client[]>(() => cachedClients ?? []);
   const [projects, setProjects] = useState<Project[]>(() => cachedProjects ?? []);
   const [statuses, setStatuses] = useState<string[]>(() => cachedProjectStatuses ?? []);
+  const [templates, setTemplates] = useState<ProjectTemplate[]>(() => cachedProjectTemplates ?? []);
   const [clientId, setClientId] = useState("");
+  const [templateId, setTemplateId] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [status, setStatus] = useState(() => cachedProjectStatuses?.[0] ?? "");
   const [isLoading, setIsLoading] = useState(() => !cachedProjects);
   const [isRefreshing, setIsRefreshing] = useState(true);
@@ -108,6 +134,8 @@ export function Projects() {
     }
   }
 
+  const selectedTemplate = templates.find((template) => template.id === templateId);
+
   async function createProject() {
     if (!clientId || !name.trim() || !status) return;
 
@@ -115,21 +143,37 @@ export function Projects() {
     setIsSaving(true);
 
     try {
-      await api.post("/projects", {
-        client_id: clientId,
-        name,
-        description: description || null,
-        status: status || statuses[0] || "DISCOVERY",
-        priority: "MEDIUM",
-        health_score: 80,
-      });
+      if (templateId) {
+        await api.post("/projects/from-template", {
+          client_id: clientId,
+          template_id: templateId,
+          name,
+          description: description || null,
+          start_date: startDate || null,
+          due_date: dueDate || null,
+        });
+      } else {
+        await api.post("/projects", {
+          client_id: clientId,
+          name,
+          description: description || null,
+          status: status || statuses[0] || "DISCOVERY",
+          start_date: startDate || null,
+          due_date: dueDate || null,
+          priority: "MEDIUM",
+          health_score: 80,
+        });
+      }
 
       setClientId("");
+      setTemplateId("");
       setName("");
       setDescription("");
+      setStartDate("");
+      setDueDate("");
       await fetchData();
     } catch {
-      setError("Não foi possível criar o projeto.");
+      setError(templateId ? "Não foi possível criar o projeto a partir do template." : "Não foi possível criar o projeto.");
     } finally {
       setIsSaving(false);
     }
@@ -146,15 +190,18 @@ export function Projects() {
       api.get("/clients"),
       api.get("/projects"),
       api.get("/metadata/project-statuses"),
+      api.get("/project-templates"),
     ])
-      .then(([clientsRes, projectsRes, statusesRes]) => {
+      .then(([clientsRes, projectsRes, statusesRes, templatesRes]) => {
         if (!isMounted) return;
         setCache(clientsCacheKey, clientsRes.data);
         setCache(projectsCacheKey, projectsRes.data);
         setCache(projectStatusesCacheKey, statusesRes.data);
+        setCache(projectTemplatesCacheKey, templatesRes.data);
         setClients(clientsRes.data);
         setProjects(projectsRes.data);
         setStatuses(statusesRes.data);
+        setTemplates(templatesRes.data);
         setStatus((currentStatus) => currentStatus || statusesRes.data[0] || "DISCOVERY");
         setError("");
       })
@@ -205,7 +252,8 @@ export function Projects() {
 
           <label className="field">
             <span>Status</span>
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <select disabled={Boolean(templateId)} value={templateId ? "PLANNING" : status} onChange={(e) => setStatus(e.target.value)}>
+              {templateId && <option value="PLANNING">PLANNING</option>}
               {statuses.map((projectStatus) => (
                 <option key={projectStatus} value={projectStatus}>
                   {projectStatus}
@@ -224,8 +272,32 @@ export function Projects() {
           </label>
 
           <button disabled={isSaving || !clientId || !name.trim() || !status} onClick={createProject}>
-            {isSaving ? "Criando..." : "Criar projeto"}
+            {isSaving ? "Criando..." : templateId ? "Criar com template" : "Criar projeto"}
           </button>
+        </div>
+
+        <div className="form-row form-row-secondary">
+          <label className="field">
+            <span>Template</span>
+            <select value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+              <option value="">Sem template</option>
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field">
+            <span>Início</span>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </label>
+
+          <label className="field">
+            <span>Prazo</span>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </label>
         </div>
 
         <div className="field-full">
@@ -238,6 +310,32 @@ export function Projects() {
             />
           </label>
         </div>
+
+        {selectedTemplate && (
+          <div className="template-preview">
+            <div className="template-preview-header">
+              <div>
+                <strong>{selectedTemplate.name}</strong>
+                <p>{selectedTemplate.description}</p>
+              </div>
+              <span className="meta-chip">{selectedTemplate.estimated_days} dias estimados</span>
+            </div>
+
+            <div className="template-task-list">
+              {selectedTemplate.tasks.map((task) => (
+                <div className="template-task-row" key={task.id}>
+                  <span>{task.position + 1}</span>
+                  <div>
+                    <strong>{task.title}</strong>
+                    {task.description && <p>{task.description}</p>}
+                  </div>
+                  <span className={`status-pill ${getPriorityClass(task.priority)}`}>{task.priority}</span>
+                  <small>{task.due_offset_days != null ? `D+${task.due_offset_days}` : "Sem prazo"}</small>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="panel">

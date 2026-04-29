@@ -309,3 +309,40 @@ create table if not exists notifications (
 create index if not exists idx_notifications_user_id on notifications(user_id);
 create index if not exists idx_notifications_user_unread on notifications(user_id, is_read) where is_read = false;
 create index if not exists idx_notifications_read_at on notifications(read_at);
+
+-- =========================
+-- PROJECT TEMPLATES
+-- =========================
+
+create table if not exists project_templates (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  description text,
+  service_type text not null unique,
+  estimated_days integer not null default 30,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+create index if not exists idx_project_templates_active on project_templates(is_active) where deleted_at is null;
+
+create trigger trg_project_templates_updated_at
+before update on project_templates
+for each row
+execute function set_updated_at();
+
+create table if not exists project_template_tasks (
+  id uuid primary key default gen_random_uuid(),
+  template_id uuid not null references project_templates(id),
+  title text not null,
+  description text,
+  status text not null default 'BACKLOG',
+  priority text not null default 'MEDIUM',
+  position integer not null default 0,
+  due_offset_days integer,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_project_template_tasks_template_position on project_template_tasks(template_id, position);

@@ -10,6 +10,7 @@ def create_log(
     old_value=None,
     new_value=None,
     user_id=None,
+    commit: bool = True,
 ):
     log = ActivityLog(
         entity_type=entity_type,
@@ -21,7 +22,8 @@ def create_log(
     )
 
     db.add(log)
-    db.commit()
+    if commit:
+        db.commit()
 
 
 def get_logs_for_entity(db: Session, entity_type: str, entity_id):

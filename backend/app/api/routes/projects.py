@@ -7,6 +7,7 @@ from app.api.deps import require_roles
 from app.db.session import get_db
 from app.schemas.activity_log import ActivityLogResponse
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.schemas.project_template import ProjectFromTemplateCreate, ProjectFromTemplateResponse
 from app.services.activity_log_service import get_logs_for_entity
 from app.services.project_service import (
     create_project,
@@ -14,6 +15,7 @@ from app.services.project_service import (
     get_project_by_id,
     update_project,
 )
+from app.services.project_template_service import create_project_from_template
 
 router = APIRouter()
 
@@ -30,6 +32,15 @@ def list_projects(
     current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER")),
 ):
     return get_projects(db, client_id)
+
+
+@router.post("/from-template", response_model=ProjectFromTemplateResponse)
+def create_from_template(
+    project: ProjectFromTemplateCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("ADMIN", "MANAGER")),
+):
+    return create_project_from_template(db, project, current_user)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)

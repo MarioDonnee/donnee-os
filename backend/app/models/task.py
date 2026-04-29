@@ -22,7 +22,9 @@ class Task(Base):
 
     assignee_id = Column(UUID(as_uuid=True))
 
+    start_date = Column(Date)
     due_date = Column(Date)
+    completed_at = Column(DateTime(timezone=True))
 
     created_by = Column(UUID(as_uuid=True))
 

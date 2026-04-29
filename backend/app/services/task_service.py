@@ -1,5 +1,5 @@
 from uuid import UUID
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy import Integer, func, or_
 from sqlalchemy.exc import ProgrammingError
@@ -12,6 +12,7 @@ from app.models.task_checklist_item import TaskChecklistItem
 from app.models.task_label import TaskLabel
 from app.models.project import Project
 from app.services.activity_log_service import create_log
+from app.services.notification_service import create_notification
 
 VALID_TASK_STATUSES = {
     "BACKLOG",
@@ -310,10 +311,20 @@ def update_task(db: Session, task_id: UUID, data, current_user=None):
         "status": task.status,
         "priority": task.priority,
         "position": task.position,
+        "start_date": task.start_date.isoformat() if task.start_date else None,
+        "due_date": task.due_date.isoformat() if task.due_date else None,
+        "completed_at": task.completed_at.isoformat() if task.completed_at else None,
     }
+    old_assignee_id = task.assignee_id
 
     for field, value in update_data.items():
         setattr(task, field, value)
+
+    if "status" in update_data:
+        if task.status == "DONE" and task.completed_at is None:
+            task.completed_at = datetime.now(timezone.utc)
+        elif task.status != "DONE":
+            task.completed_at = None
 
     db.commit()
     db.refresh(task)
@@ -329,6 +340,23 @@ def update_task(db: Session, task_id: UUID, data, current_user=None):
         new_value=data.model_dump(mode="json", exclude_unset=True),
         user_id=current_user.id if current_user else None,
     )
+
+    new_assignee_id = task.assignee_id
+    if (
+        "assignee_id" in update_data
+        and new_assignee_id
+        and new_assignee_id != old_assignee_id
+        and (current_user is None or new_assignee_id != current_user.id)
+    ):
+        create_notification(
+            db=db,
+            user_id=new_assignee_id,
+            type="task_assigned",
+            title="Nova tarefa atribuída",
+            body=f'Você foi atribuído à tarefa "{task.title}"',
+            entity_type="task",
+            entity_id=task.id,
+        )
 
     return task
 
@@ -407,6 +435,11 @@ def move_task(db: Session, task_id: UUID, data, current_user=None):
 
         for index, current_task in enumerate(ordered_destination_tasks):
             current_task.position = index
+
+    if task.status == "DONE" and task.completed_at is None:
+        task.completed_at = datetime.now(timezone.utc)
+    elif task.status != "DONE":
+        task.completed_at = None
 
     db.commit()
     db.refresh(task)

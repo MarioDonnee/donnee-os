@@ -11,6 +11,7 @@ class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
     priority: str = "MEDIUM"
+    start_date: Optional[date] = None
     due_date: Optional[date] = None
 
 
@@ -23,7 +24,9 @@ class TaskResponse(BaseModel):
     priority: str
     position: int
     assignee_id: Optional[UUID]
+    start_date: Optional[date]
     due_date: Optional[date]
+    completed_at: Optional[datetime]
     created_by: Optional[UUID]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
@@ -41,6 +44,7 @@ class TaskUpdate(BaseModel):
     status: Optional[str] = None
     priority: Optional[str] = None
     assignee_id: Optional[UUID] = None
+    start_date: Optional[date] = None
     due_date: Optional[date] = None
 
 

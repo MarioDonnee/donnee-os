@@ -99,9 +99,12 @@ export function MyWork() {
 
   useEffect(() => {
     let isMounted = true;
-    load()
+
+    Promise.resolve()
+      .then(() => load())
       .catch(() => { if (isMounted) setError("Não foi possível carregar suas tarefas."); })
       .finally(() => { if (isMounted) setIsLoading(false); });
+
     return () => { isMounted = false; };
   }, []);
 

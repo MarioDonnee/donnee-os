@@ -162,6 +162,7 @@ create table if not exists tasks (
   priority task_priority not null default 'MEDIUM',
   position integer not null default 0,
   assignee_id uuid references users(id),
+  start_date date,
   due_date date,
   completed_at timestamptz,
   created_by uuid references users(id),
@@ -175,6 +176,7 @@ create index if not exists idx_tasks_status on tasks(status);
 create index if not exists idx_tasks_status_position on tasks(status, position);
 create index if not exists idx_tasks_priority on tasks(priority);
 create index if not exists idx_tasks_assignee_id on tasks(assignee_id);
+create index if not exists idx_tasks_start_date on tasks(start_date);
 create index if not exists idx_tasks_due_date on tasks(due_date);
 
 create trigger trg_tasks_updated_at

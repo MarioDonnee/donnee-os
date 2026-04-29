@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models.task_comment import TaskComment
 from app.services.activity_log_service import create_log
+from app.services.notification_service import create_notification
 from app.services.task_service import get_task_by_id
 
 
@@ -46,6 +47,17 @@ def create_comment(db: Session, task_id: UUID, data, current_user):
         new_value={"comment_id": str(comment.id), "body": comment.body},
         user_id=current_user.id,
     )
+
+    if task.assignee_id and task.assignee_id != current_user.id:
+        create_notification(
+            db=db,
+            user_id=task.assignee_id,
+            type="task_comment",
+            title="Novo comentário",
+            body=f'Novo comentário na tarefa "{task.title}"',
+            entity_type="task",
+            entity_id=task_id,
+        )
 
     return comment
 

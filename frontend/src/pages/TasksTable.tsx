@@ -97,16 +97,20 @@ export function TasksTable() {
   // Reload tasks when filters change
   useEffect(() => {
     let isMounted = true;
-    setIsLoadingTasks(true);
 
-    const params = new URLSearchParams();
-    if (filterStatus) params.set("status", filterStatus);
-    if (filterPriority) params.set("priority", filterPriority);
-    if (filterProjectId) params.set("project_id", filterProjectId);
-    if (filterOverdue) params.set("overdue", "true");
-    if (debouncedSearch) params.set("search", debouncedSearch);
+    Promise.resolve()
+      .then(() => {
+        setIsLoadingTasks(true);
 
-    api.get(`/tasks?${params}`)
+        const params = new URLSearchParams();
+        if (filterStatus) params.set("status", filterStatus);
+        if (filterPriority) params.set("priority", filterPriority);
+        if (filterProjectId) params.set("project_id", filterProjectId);
+        if (filterOverdue) params.set("overdue", "true");
+        if (debouncedSearch) params.set("search", debouncedSearch);
+
+        return api.get(`/tasks?${params}`);
+      })
       .then((res) => { if (isMounted) setTasks(res.data); })
       .catch(() => { if (isMounted) setError("Não foi possível carregar as tarefas."); })
       .finally(() => { if (isMounted) setIsLoadingTasks(false); });

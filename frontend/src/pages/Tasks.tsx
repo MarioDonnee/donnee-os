@@ -26,7 +26,9 @@ type Task = {
   priority: string;
   position: number;
   assignee_id?: string | null;
+  start_date?: string | null;
   due_date?: string | null;
+  completed_at?: string | null;
   created_by?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -184,6 +186,7 @@ export function Tasks() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState(() => cachedTaskPriorities?.[1] ?? cachedTaskPriorities?.[0] ?? "");
+  const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [isLoading, setIsLoading] = useState(() => !cachedTasks);
   const [isRefreshing, setIsRefreshing] = useState(true);
@@ -207,6 +210,7 @@ export function Tasks() {
   const [detailDescription, setDetailDescription] = useState("");
   const [detailStatus, setDetailStatus] = useState("");
   const [detailPriority, setDetailPriority] = useState("");
+  const [detailStartDate, setDetailStartDate] = useState("");
   const [detailDueDate, setDetailDueDate] = useState("");
   const [newCommentBody, setNewCommentBody] = useState("");
   const [editingCommentId, setEditingCommentId] = useState("");
@@ -254,7 +258,7 @@ export function Tasks() {
     only_mine: filterOnlyMine || undefined,
   }), [filterProjectId, filterStatus, filterPriority, filterLabelId, filterOverdue, debouncedFilterSearch, filterOnlyMine]);
 
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setError("");
 
     try {
@@ -285,7 +289,7 @@ export function Tasks() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }
+  }, [getTaskFilterParams, hasActiveFilters]);
 
   async function createTask() {
     if (!projectId || !title.trim() || !priority) return;
@@ -299,12 +303,14 @@ export function Tasks() {
         title,
         description: description || null,
         priority: priority || priorities[0] || "MEDIUM",
+        start_date: startDate || null,
         due_date: dueDate || null,
       });
 
       setProjectId("");
       setTitle("");
       setDescription("");
+      setStartDate("");
       setDueDate("");
       await fetchData();
     } catch {
@@ -327,6 +333,7 @@ export function Tasks() {
     setDetailDescription(task.description || "");
     setDetailStatus(task.status);
     setDetailPriority(task.priority);
+    setDetailStartDate(getDateInputValue(task.start_date));
     setDetailDueDate(getDateInputValue(task.due_date));
   }
 
@@ -609,6 +616,7 @@ export function Tasks() {
         description: detailDescription.trim() || null,
         status: detailStatus,
         priority: detailPriority,
+        start_date: detailStartDate || null,
         due_date: detailDueDate || null,
       });
 
@@ -771,7 +779,7 @@ export function Tasks() {
   async function moveTask(taskId: string, nextStatus: string, nextPosition: number) {
     const task = tasks.find((currentTask) => currentTask.id === taskId);
 
-    if (!task || savingTaskId) return;
+    if (!task || savingTaskId === taskId) return;
 
     const previousStatus = task.status;
     const previousPosition = task.position;
@@ -823,14 +831,16 @@ export function Tasks() {
   useEffect(() => {
     let isMounted = true;
 
-    fetchData().finally(() => {
-      if (!isMounted) return;
-    });
+    Promise.resolve()
+      .then(() => fetchData())
+      .finally(() => {
+        if (!isMounted) return;
+      });
 
     return () => {
       isMounted = false;
     };
-  }, [debouncedFilterSearch, filterProjectId, filterStatus, filterPriority, filterLabelId, filterOverdue, filterOnlyMine]);
+  }, [fetchData]);
 
   return (
     <section className="content">
@@ -894,6 +904,15 @@ export function Tasks() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Detalhe a próxima ação"
+            />
+          </label>
+
+          <label className="field">
+            <span>Início</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
             />
           </label>
 
@@ -1063,7 +1082,7 @@ export function Tasks() {
                           className={`task-card ${draggingTaskId === task.id ? "task-card-dragging" : ""} ${
                             savingTaskId === task.id ? "task-card-saving" : ""
                           }`}
-                          draggable={!savingTaskId}
+                          draggable={savingTaskId !== task.id}
                           key={task.id}
                           onClick={() => openTaskDetail(task)}
                           onKeyDown={(event) => {
@@ -1536,6 +1555,16 @@ export function Tasks() {
                       </label>
 
                       <label className="field">
+                        <span>Início</span>
+                        <input
+                          disabled={!canManageTasks || isDetailSaving}
+                          type="date"
+                          value={detailStartDate}
+                          onChange={(event) => setDetailStartDate(event.target.value)}
+                        />
+                      </label>
+
+                      <label className="field">
                         <span>Prazo</span>
                         <input
                           disabled={!canManageTasks || isDetailSaving}
@@ -1552,7 +1581,11 @@ export function Tasks() {
                         <span className={`status-pill ${getPriorityClass(selectedTask.priority)}`}>
                           {selectedTask.priority}
                         </span>
+                        <span className="meta-chip">Início: {formatDate(selectedTask.start_date)}</span>
                         <span className="meta-chip">Prazo: {formatDate(selectedTask.due_date)}</span>
+                        {selectedTask.completed_at && (
+                          <span className="meta-chip">Concluída: {formatDateTime(selectedTask.completed_at)}</span>
+                        )}
                         <span className="meta-chip">Responsável: {selectedTask.assignee_id || "sem responsável"}</span>
                         <span className="meta-chip">Criada: {formatDateTime(selectedTask.created_at)}</span>
                         <span className="meta-chip">Atualizada: {formatDateTime(selectedTask.updated_at)}</span>

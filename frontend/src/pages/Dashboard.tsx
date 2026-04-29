@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
 import {
+  AlertTriangle,
   ArrowUpRight,
   Briefcase,
   CheckCircle,
@@ -13,6 +14,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { getRiskStatusClass, getRiskStatusLabel } from "../utils/risk";
 
 type OverdueTaskItem = {
   id: string;
@@ -29,6 +31,14 @@ type ActivityItem = {
   performed_at: string | null;
 };
 
+type RiskProjectItem = {
+  id: string;
+  name: string;
+  health_score: number | null;
+  risk_status: string;
+  due_date: string | null;
+};
+
 type DashboardSummary = {
   total_clients: number;
   total_projects: number;
@@ -36,9 +46,14 @@ type DashboardSummary = {
   open_tasks: number;
   done_tasks: number;
   overdue_tasks: number;
+  blocked_tasks: number;
+  urgent_open_tasks: number;
+  due_today_tasks: number;
+  projects_at_risk: number;
   tasks_by_status: Record<string, number>;
   tasks_by_priority: Record<string, number>;
   overdue_tasks_list: OverdueTaskItem[];
+  risk_projects: RiskProjectItem[];
   recent_activity: ActivityItem[];
 };
 
@@ -49,9 +64,14 @@ const emptySummary: DashboardSummary = {
   open_tasks: 0,
   done_tasks: 0,
   overdue_tasks: 0,
+  blocked_tasks: 0,
+  urgent_open_tasks: 0,
+  due_today_tasks: 0,
+  projects_at_risk: 0,
   tasks_by_status: {},
   tasks_by_priority: {},
   overdue_tasks_list: [],
+  risk_projects: [],
   recent_activity: [],
 };
 
@@ -307,6 +327,10 @@ export function Dashboard() {
         <MetricCard title="Abertas" value={visibleSummary.open_tasks} detail={`${100 - donePercent}% em fluxo`} icon={Clock} tone="amber" isLoading={isInitialLoading} />
         <MetricCard title="Concluídas" value={visibleSummary.done_tasks} detail={`${donePercent}% do total`} icon={CheckCircle} tone="green" isLoading={isInitialLoading} />
         <MetricCard title="Atrasadas" value={visibleSummary.overdue_tasks} detail={`${overduePercent}% em risco`} icon={Clock} tone="red" isLoading={isInitialLoading} />
+        <MetricCard title="Bloqueios" value={visibleSummary.blocked_tasks} detail="ativos no fluxo" icon={AlertTriangle} tone="red" isLoading={isInitialLoading} />
+        <MetricCard title="Urgentes" value={visibleSummary.urgent_open_tasks} detail="abertas agora" icon={Sparkles} tone="amber" isLoading={isInitialLoading} />
+        <MetricCard title="Hoje" value={visibleSummary.due_today_tasks} detail="vencem hoje" icon={Clock} tone="cyan" isLoading={isInitialLoading} />
+        <MetricCard title="Projetos em risco" value={visibleSummary.projects_at_risk} detail="health abaixo de 60" icon={Briefcase} tone="red" isLoading={isInitialLoading} />
       </section>
 
       <section className="dashboard-panels">
@@ -390,14 +414,37 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="panel intelligence-panel">
-          <Sparkles size={22} />
-          <p className="eyebrow">Signal Layer</p>
-          <h2>Pronto para plugar inteligência operacional.</h2>
-          <p>
-            Este bloco mantém espaço para logs, recomendações e anomalias quando os endpoints
-            evoluírem.
-          </p>
+        <div className="panel risk-project-panel">
+          <div className="panel-heading">
+            <h2>Projetos em risco</h2>
+            <span>{visibleSummary.projects_at_risk} ativos</span>
+          </div>
+
+          <div className="signal-list">
+            {isInitialLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div className="signal-item skeleton-row" key={i}>
+                  <div className="skeleton-dot" />
+                  <div style={{ flex: 1 }}><div className="skeleton-line" /></div>
+                </div>
+              ))
+            ) : visibleSummary.risk_projects.length === 0 ? (
+              <p className="empty-state">Nenhum projeto em risco crítico.</p>
+            ) : (
+              visibleSummary.risk_projects.map((project) => (
+                <Link className="signal-item signal-item-link" key={project.id} to={`/projects/${project.id}`}>
+                  <span className={`risk-dot ${getRiskStatusClass(project.risk_status)}`} />
+                  <div>
+                    <strong>{project.name}</strong>
+                    <p className="row-detail">
+                      {getRiskStatusLabel(project.risk_status)} · {project.health_score ?? 0}%
+                    </p>
+                  </div>
+                  <small>{project.due_date ? new Date(project.due_date).toLocaleDateString("pt-BR") : "sem prazo"}</small>
+                </Link>
+              ))
+            )}
+          </div>
         </div>
       </section>
     </section>

@@ -10,6 +10,7 @@ type Task = {
   status: string;
   priority: string;
   due_date?: string | null;
+  due_status?: string | null;
 };
 
 type Project = {
@@ -122,7 +123,7 @@ export function CalendarView() {
           client,
           status: task.status,
           priority: task.priority,
-          isOverdue: date < todayKey && !isInactive(task.status),
+          isOverdue: task.due_status === "OVERDUE" || (date < todayKey && !isInactive(task.status)),
         };
       });
 

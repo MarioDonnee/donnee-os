@@ -13,6 +13,12 @@ from app.models.task_label import TaskLabel
 from app.models.project import Project
 from app.services.activity_log_service import create_log
 from app.services.notification_service import create_notification
+from app.services.risk_service import (
+    attach_due_status_to_task,
+    attach_due_status_to_tasks,
+    calculate_due_status,
+    handle_task_automations,
+)
 
 VALID_TASK_STATUSES = {
     "BACKLOG",
@@ -49,6 +55,7 @@ def create_task(db: Session, data, current_user=None):
     db.add(task)
     db.commit()
     db.refresh(task)
+    attach_due_status_to_task(task)
 
     create_log(
         db=db,
@@ -57,6 +64,15 @@ def create_task(db: Session, data, current_user=None):
         action="created",
         new_value={**data.model_dump(mode="json"), "position": task.position},
         user_id=current_user.id if current_user else None,
+    )
+
+    handle_task_automations(
+        db,
+        task,
+        old_status=None,
+        old_priority=None,
+        old_due_status=None,
+        current_user=current_user,
     )
 
     return task
@@ -263,10 +279,12 @@ def get_tasks(
 
         for task in tasks:
             task.labels = []
+            attach_due_status_to_task(task)
 
         return tasks
 
     attach_labels_to_tasks(db, tasks)
+    attach_due_status_to_tasks(tasks)
     return attach_checklist_counts_to_tasks(db, tasks)
 
 
@@ -284,6 +302,7 @@ def get_task_by_id(db: Session, task_id: UUID):
     if task:
         attach_labels_to_task(db, task)
         attach_checklist_counts_to_task(db, task)
+        attach_due_status_to_task(task)
 
     return task
 
@@ -316,6 +335,9 @@ def update_task(db: Session, task_id: UUID, data, current_user=None):
         "completed_at": task.completed_at.isoformat() if task.completed_at else None,
     }
     old_assignee_id = task.assignee_id
+    old_status = task.status
+    old_priority = task.priority
+    old_due_status = calculate_due_status(task)
 
     for field, value in update_data.items():
         setattr(task, field, value)
@@ -358,6 +380,15 @@ def update_task(db: Session, task_id: UUID, data, current_user=None):
             entity_id=task.id,
         )
 
+    handle_task_automations(
+        db,
+        task,
+        old_status=old_status,
+        old_priority=old_priority,
+        old_due_status=old_due_status,
+        current_user=current_user,
+    )
+
     return task
 
 
@@ -375,6 +406,9 @@ def move_task(db: Session, task_id: UUID, data, current_user=None):
         "status": task.status,
         "position": task.position,
     }
+    old_status = task.status
+    old_priority = task.priority
+    old_due_status = calculate_due_status(task)
 
     next_status = data.status
     next_position = max(data.position, 0)
@@ -457,6 +491,15 @@ def move_task(db: Session, task_id: UUID, data, current_user=None):
             "position": task.position,
         },
         user_id=current_user.id if current_user else None,
+    )
+
+    handle_task_automations(
+        db,
+        task,
+        old_status=old_status,
+        old_priority=old_priority,
+        old_due_status=old_due_status,
+        current_user=current_user,
     )
 
     return task

@@ -7,6 +7,7 @@ from app.models.client import Client
 from app.models.project import Project
 from app.models.task import Task
 from app.models.user import User
+from app.services.risk_service import get_risk_status
 
 
 def get_dashboard_summary(db: Session):
@@ -56,6 +57,45 @@ def get_dashboard_summary(db: Session):
         .count()
     )
 
+    blocked_tasks = (
+        db.query(Task)
+        .filter(
+            Task.deleted_at.is_(None),
+            Task.status == "BLOCKED",
+        )
+        .count()
+    )
+
+    urgent_open_tasks = (
+        db.query(Task)
+        .filter(
+            Task.deleted_at.is_(None),
+            Task.status.notin_(["DONE", "CANCELLED"]),
+            Task.priority == "URGENT",
+        )
+        .count()
+    )
+
+    due_today_tasks = (
+        db.query(Task)
+        .filter(
+            Task.deleted_at.is_(None),
+            Task.status.notin_(["DONE", "CANCELLED"]),
+            Task.due_date == date.today(),
+        )
+        .count()
+    )
+
+    projects_at_risk = (
+        db.query(Project)
+        .filter(
+            Project.deleted_at.is_(None),
+            Project.status.notin_(["DELIVERED", "CANCELLED"]),
+            Project.health_score < 60,
+        )
+        .count()
+    )
+
     tasks_by_status_rows = (
         db.query(Task.status, func.count(Task.id))
         .filter(Task.deleted_at.is_(None))
@@ -101,6 +141,29 @@ def get_dashboard_summary(db: Session):
         for task, project_name in overdue_rows
     ]
 
+    risk_project_rows = (
+        db.query(Project)
+        .filter(
+            Project.deleted_at.is_(None),
+            Project.status.notin_(["DELIVERED", "CANCELLED"]),
+            Project.health_score < 60,
+        )
+        .order_by(Project.health_score.asc(), Project.due_date.asc().nullslast())
+        .limit(5)
+        .all()
+    )
+
+    risk_projects = [
+        {
+            "id": str(project.id),
+            "name": project.name,
+            "health_score": project.health_score,
+            "risk_status": get_risk_status(project.health_score),
+            "due_date": project.due_date.isoformat() if project.due_date else None,
+        }
+        for project in risk_project_rows
+    ]
+
     activity_rows = (
         db.query(ActivityLog, User.name)
         .outerjoin(User, ActivityLog.performed_by == User.id)
@@ -127,8 +190,13 @@ def get_dashboard_summary(db: Session):
         "open_tasks": open_tasks,
         "done_tasks": done_tasks,
         "overdue_tasks": overdue_tasks,
+        "blocked_tasks": blocked_tasks,
+        "urgent_open_tasks": urgent_open_tasks,
+        "due_today_tasks": due_today_tasks,
+        "projects_at_risk": projects_at_risk,
         "tasks_by_status": tasks_by_status,
         "tasks_by_priority": tasks_by_priority,
         "overdue_tasks_list": overdue_tasks_list,
+        "risk_projects": risk_projects,
         "recent_activity": recent_activity,
     }

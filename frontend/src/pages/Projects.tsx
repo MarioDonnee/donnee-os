@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { getCache, setCache } from "../services/cache";
+import { getRiskStatusClass, getRiskStatusLabel } from "../utils/risk";
 
 type Client = {
   id: string;
@@ -18,6 +19,7 @@ type Project = {
   start_date?: string | null;
   due_date?: string | null;
   health_score?: number | null;
+  risk_status?: string | null;
 };
 
 type ProjectTemplateTask = {
@@ -379,7 +381,9 @@ export function Projects() {
 
                 <div className="health-meter" aria-label={`Health score ${project.health_score ?? 0}`}>
                   <div className="health-meter-label">
-                    <span>Health score</span>
+                    <span className={`risk-pill ${getRiskStatusClass(project.risk_status)}`}>
+                      {getRiskStatusLabel(project.risk_status)}
+                    </span>
                     <strong>{project.health_score ?? 0}%</strong>
                   </div>
                   <div className="health-track">

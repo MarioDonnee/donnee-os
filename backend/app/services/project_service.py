@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from app.models.project import Project
 from app.models.client import Client
 from app.services.activity_log_service import create_log
+from app.services.risk_service import attach_risk_status_to_project, attach_risk_status_to_projects
 
 
 def create_project(db: Session, data, current_user=None):
@@ -45,15 +46,20 @@ def get_projects(db: Session, client_id: UUID | None = None):
     if client_id:
         query = query.filter(Project.client_id == client_id)
 
-    return query.all()
+    return attach_risk_status_to_projects(query.all())
 
 
 def get_project_by_id(db: Session, project_id: UUID):
-    return (
+    project = (
         db.query(Project)
         .filter(Project.id == project_id, Project.deleted_at.is_(None))
         .first()
     )
+
+    if project:
+        attach_risk_status_to_project(project)
+
+    return project
 
 
 def update_project(db: Session, project_id: UUID, data, current_user=None):
@@ -98,4 +104,4 @@ def update_project(db: Session, project_id: UUID, data, current_user=None):
         user_id=current_user.id if current_user else None,
     )
 
-    return project
+    return attach_risk_status_to_project(project)

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useAuth } from "../auth/useAuth";
 import { api } from "../services/api";
+import { getDueStatusClass, getDueStatusLabel } from "../utils/risk";
 
 type Label = { id: string; name: string; color?: string | null };
 type Task = {
@@ -12,6 +13,7 @@ type Task = {
   priority: string;
   assignee_id?: string | null;
   due_date?: string | null;
+  due_status?: string | null;
   updated_at?: string | null;
   labels?: Label[];
   checklist_total?: number;
@@ -25,9 +27,7 @@ const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 const PRIORITY_ORDER: Record<string, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 
 function isOverdue(task: Task) {
-  if (!task.due_date) return false;
-  if (task.status === "DONE" || task.status === "CANCELLED") return false;
-  return new Date(task.due_date) < new Date();
+  return task.due_status === "OVERDUE";
 }
 
 function getPriorityClass(p: string) {
@@ -328,7 +328,9 @@ export function TasksTable() {
                       )}
                     </td>
                     <td className={`td-secondary ${overdue ? "td-overdue" : ""}`}>
-                      {task.due_date ? new Date(task.due_date).toLocaleDateString("pt-BR") : "—"}
+                      <span className={`due-chip ${getDueStatusClass(task.due_status)}`} title={task.due_date ? new Date(task.due_date).toLocaleDateString("pt-BR") : undefined}>
+                        {getDueStatusLabel(task.due_status)}
+                      </span>
                     </td>
                     <td>
                       <div className="label-chips">

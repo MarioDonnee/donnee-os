@@ -9,6 +9,7 @@ from app.models.project import Project
 from app.models.project_template import ProjectTemplate, ProjectTemplateTask
 from app.models.task import Task
 from app.services.activity_log_service import create_log
+from app.services.risk_service import attach_due_status_to_tasks, attach_risk_status_to_project
 from app.services.task_service import attach_checklist_counts_to_tasks, attach_labels_to_tasks
 
 
@@ -153,6 +154,8 @@ def create_project_from_template(db: Session, data, current_user=None) -> dict:
 
         attach_labels_to_tasks(db, created_tasks)
         attach_checklist_counts_to_tasks(db, created_tasks)
+        attach_due_status_to_tasks(created_tasks)
+        attach_risk_status_to_project(project)
 
         return {"project": project, "tasks": created_tasks, "created_at": project.created_at}
     except Exception:

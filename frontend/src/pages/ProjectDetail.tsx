@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, CheckSquare, Clock } from "lucide-react";
 import { api } from "../services/api";
+import { getDueStatusClass, getDueStatusLabel, getRiskStatusClass, getRiskStatusLabel } from "../utils/risk";
 
 type Project = {
   id: string;
@@ -11,6 +12,7 @@ type Project = {
   status: string;
   priority: string;
   health_score?: number | null;
+  risk_status?: string | null;
   start_date?: string | null;
   due_date?: string | null;
 };
@@ -21,6 +23,7 @@ type Task = {
   status: string;
   priority: string;
   due_date?: string | null;
+  due_status?: string | null;
   checklist_total?: number;
   checklist_done?: number;
 };
@@ -58,9 +61,7 @@ function getHealthClass(score: number) {
 }
 
 function isOverdue(task: Task) {
-  if (!task.due_date) return false;
-  if (task.status === "DONE" || task.status === "CANCELLED") return false;
-  return new Date(task.due_date) < new Date();
+  return task.due_status === "OVERDUE";
 }
 
 export function ProjectDetail() {
@@ -202,6 +203,9 @@ export function ProjectDetail() {
           <strong className={`status-pill ${getPriorityClass(project.priority)}`}>
             {project.priority}
           </strong>
+          <strong className={`risk-pill ${getRiskStatusClass(project.risk_status)}`}>
+            {getRiskStatusLabel(project.risk_status)}
+          </strong>
         </div>
       </header>
 
@@ -241,7 +245,7 @@ export function ProjectDetail() {
           <div className="health-meter">
             <div className="health-meter-label">
               <span>Health score</span>
-              <strong>{project.health_score}%</strong>
+              <strong>{project.health_score}% · {getRiskStatusLabel(project.risk_status)}</strong>
             </div>
             <div className="health-track">
               <span
@@ -306,11 +310,9 @@ export function ProjectDetail() {
                         <span className={`status-pill status-pill-xs ${getPriorityClass(task.priority)}`}>
                           {task.priority}
                         </span>
-                        {task.due_date && (
-                          <span className="meta-chip meta-chip-xs">
-                            {new Date(task.due_date).toLocaleDateString("pt-BR")}
-                          </span>
-                        )}
+                        <span className={`due-chip due-chip-xs ${getDueStatusClass(task.due_status)}`} title={task.due_date ? new Date(task.due_date).toLocaleDateString("pt-BR") : undefined}>
+                          {getDueStatusLabel(task.due_status)}
+                        </span>
                         {(task.checklist_total ?? 0) > 0 && (
                           <span className="meta-chip meta-chip-xs">
                             ✓ {task.checklist_done}/{task.checklist_total}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "../auth/useAuth";
 import { api } from "../services/api";
 import { getCache, setCache } from "../services/cache";
+import { getDueStatusClass, getDueStatusLabel } from "../utils/risk";
 
 type Project = {
   id: string;
@@ -28,6 +29,7 @@ type Task = {
   assignee_id?: string | null;
   start_date?: string | null;
   due_date?: string | null;
+  due_status?: string | null;
   completed_at?: string | null;
   created_by?: string | null;
   created_at?: string | null;
@@ -128,18 +130,6 @@ function formatDate(value?: string | null) {
   if (!value) return "não informado";
 
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(value));
-}
-
-function isPastDue(value?: string | null) {
-  if (!value) return false;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const dueDate = new Date(value);
-  dueDate.setHours(0, 0, 0, 0);
-
-  return dueDate < today;
 }
 
 function formatDateTime(value?: string | null) {
@@ -1128,8 +1118,8 @@ export function Tasks() {
                           </div>
                           <div className="task-card-meta">
                             <span>{getProjectName(task)}</span>
-                            <span className={isPastDue(task.due_date) && task.status !== "DONE" ? "due-chip due-chip-late" : "due-chip"}>
-                              {task.due_date ? formatDate(task.due_date) : "Sem prazo"}
+                            <span className={`due-chip ${getDueStatusClass(task.due_status)}`} title={task.due_date ? formatDate(task.due_date) : undefined}>
+                              {getDueStatusLabel(task.due_status)}
                             </span>
                           </div>
                           {(task.labels || []).length > 0 && (
@@ -1576,6 +1566,9 @@ export function Tasks() {
                         </span>
                         <span className="meta-chip">Início: {formatDate(selectedTask.start_date)}</span>
                         <span className="meta-chip">Prazo: {formatDate(selectedTask.due_date)}</span>
+                        <span className={`due-chip ${getDueStatusClass(selectedTask.due_status)}`}>
+                          {getDueStatusLabel(selectedTask.due_status)}
+                        </span>
                         {selectedTask.completed_at && (
                           <span className="meta-chip">Concluída: {formatDateTime(selectedTask.completed_at)}</span>
                         )}

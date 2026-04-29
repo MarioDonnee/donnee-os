@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckSquare, Clock } from "lucide-react";
 import { useAuth } from "../auth/useAuth";
 import { api } from "../services/api";
+import { getDueStatusClass, getDueStatusLabel } from "../utils/risk";
 
 type Label = { id: string; name: string; color?: string | null };
 type Task = {
@@ -11,6 +12,7 @@ type Task = {
   status: string;
   priority: string;
   due_date?: string | null;
+  due_status?: string | null;
   updated_at?: string | null;
   labels?: Label[];
   checklist_total?: number;
@@ -42,27 +44,14 @@ type GroupIcon = "risk" | "today" | "week" | "later" | "none";
 type Group = { label: string; icon: GroupIcon; tasks: Task[] };
 
 function buildGroups(tasks: Task[]): Group[] {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tomorrow = new Date(today.getTime() + 86400000);
-  const weekEnd = new Date(today.getTime() + 7 * 86400000);
-
   const active = tasks.filter((t) => t.status !== "DONE" && t.status !== "CANCELLED");
   const done = tasks.filter((t) => t.status === "DONE");
 
-  const overdue = active.filter((t) => t.due_date && new Date(t.due_date) < today);
-  const dueToday = active.filter((t) => {
-    if (!t.due_date) return false;
-    const d = new Date(t.due_date);
-    return d >= today && d < tomorrow;
-  });
-  const dueWeek = active.filter((t) => {
-    if (!t.due_date) return false;
-    const d = new Date(t.due_date);
-    return d >= tomorrow && d < weekEnd;
-  });
-  const later = active.filter((t) => t.due_date && new Date(t.due_date) >= weekEnd);
-  const noDate = active.filter((t) => !t.due_date);
+  const overdue = active.filter((t) => t.due_status === "OVERDUE");
+  const dueToday = active.filter((t) => t.due_status === "DUE_TODAY");
+  const dueWeek = active.filter((t) => t.due_status === "DUE_SOON");
+  const later = active.filter((t) => t.due_status === "UPCOMING");
+  const noDate = active.filter((t) => t.due_status === "NO_DATE");
 
   const groups: Group[] = [];
   if (overdue.length) groups.push({ label: "Atrasadas", icon: "risk", tasks: overdue });
@@ -133,7 +122,7 @@ export function MyWork() {
 
   const groups = useMemo(() => buildGroups(tasks), [tasks]);
   const activeTasks = tasks.filter((t) => t.status !== "DONE" && t.status !== "CANCELLED");
-  const overdueTasks = activeTasks.filter((t) => t.due_date && new Date(t.due_date) < new Date());
+  const overdueTasks = activeTasks.filter((t) => t.due_status === "OVERDUE");
   const doneTasks = tasks.filter((t) => t.status === "DONE");
 
   if (isLoading) {
@@ -254,11 +243,9 @@ export function MyWork() {
                           {task.status.replace("_", " ")}
                         </button>
                       )}
-                      {task.due_date && (
-                        <span className={`meta-chip ${new Date(task.due_date) < new Date() && task.status !== "DONE" ? "meta-chip-risk" : ""}`}>
-                          {new Date(task.due_date).toLocaleDateString("pt-BR")}
-                        </span>
-                      )}
+                      <span className={`due-chip ${getDueStatusClass(task.due_status)}`} title={task.due_date ? new Date(task.due_date).toLocaleDateString("pt-BR") : undefined}>
+                        {getDueStatusLabel(task.due_status)}
+                      </span>
                     </div>
                   </div>
                 );

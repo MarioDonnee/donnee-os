@@ -26,6 +26,7 @@ class TaskResponse(BaseModel):
     assignee_id: Optional[UUID]
     start_date: Optional[date]
     due_date: Optional[date]
+    due_status: str = "NO_DATE"
     completed_at: Optional[datetime]
     created_by: Optional[UUID]
     created_at: Optional[datetime]

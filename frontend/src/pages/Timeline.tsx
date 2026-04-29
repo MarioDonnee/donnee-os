@@ -11,6 +11,7 @@ type Task = {
   priority: string;
   start_date?: string | null;
   due_date?: string | null;
+  due_status?: string | null;
 };
 
 type Project = {
@@ -137,7 +138,7 @@ export function Timeline() {
         start: orderedStart,
         end: orderedEnd,
         isPoint: toDateKey(orderedStart) === toDateKey(orderedEnd),
-        isOverdue: Boolean(task.due_date && parseLocalDate(task.due_date) < today && !isInactive(task.status)),
+        isOverdue: task.due_status === "OVERDUE" || Boolean(task.due_date && parseLocalDate(task.due_date) < today && !isInactive(task.status)),
       });
     });
 

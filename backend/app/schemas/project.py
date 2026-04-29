@@ -40,6 +40,7 @@ class ProjectResponse(BaseModel):
     due_date: Optional[date]
     priority: str
     health_score: Optional[int]
+    risk_status: str = "HEALTHY"
 
     class Config:
         from_attributes = True

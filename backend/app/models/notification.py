@@ -20,3 +20,4 @@ class Notification(Base):
     entity_id = Column(UUID(as_uuid=True))
     is_read = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    read_at = Column(DateTime(timezone=True))

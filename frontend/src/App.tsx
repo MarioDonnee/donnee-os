@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BrowserRouter, Routes, Route, NavLink, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, NavLink, Outlet } from "react-router-dom";
 import { Bell, BriefcaseBusiness, Calendar, LayoutDashboard, ListTodo, LogOut, Rows3, Table2, User2, UserCog, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AuthProvider } from "./auth/AuthProvider";
@@ -12,6 +12,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { InactiveAccess } from "./pages/InactiveAccess";
 import { Login } from "./pages/Login";
 import { MyWork } from "./pages/MyWork";
+import { Notifications } from "./pages/Notifications";
 import { Team } from "./pages/Team";
 import { Timeline } from "./pages/Timeline";
 import { PendingAccess } from "./pages/PendingAccess";
@@ -43,6 +44,7 @@ type NotificationItem = {
   entity_id: string | null;
   is_read: boolean;
   created_at: string | null;
+  read_at: string | null;
 };
 
 const navItems: NavGroup[] = [
@@ -79,6 +81,13 @@ function formatRelativeTime(iso: string | null): string {
   return `${d}d atrás`;
 }
 
+function getNotificationHref(notification: NotificationItem): string | null {
+  if (notification.entity_type === "task") return "/tasks";
+  if (notification.entity_type === "project" && notification.entity_id) return `/projects/${notification.entity_id}`;
+  if (notification.entity_type === "client" && notification.entity_id) return `/clients/${notification.entity_id}`;
+  return null;
+}
+
 function Layout() {
   const { currentUser, signOut } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -88,7 +97,7 @@ function Layout() {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    async function fetchCount() {
+    async function pollCount() {
       try {
         const res = await api.get<{ unread_count: number }>("/notifications/unread-count");
         setUnreadCount(res.data.unread_count);
@@ -96,8 +105,8 @@ function Layout() {
         // Notifications are non-critical for shell navigation.
       }
     }
-    fetchCount();
-    const id = setInterval(fetchCount, 30_000);
+    pollCount();
+    const id = setInterval(pollCount, 30_000);
     return () => clearInterval(id);
   }, []);
 
@@ -120,19 +129,25 @@ function Layout() {
     setNotifOpen(true);
     setNotifLoading(true);
     try {
-      const res = await api.get<{ items: NotificationItem[]; unread_count: number }>("/notifications");
+      const res = await api.get<{ items: NotificationItem[]; unread_count: number }>("/notifications", {
+        params: { limit: 8 },
+      });
       setNotifications(res.data.items);
-      if (res.data.unread_count > 0) {
-        await api.patch("/notifications/read-all");
-        setUnreadCount(0);
-        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      } else {
-        setUnreadCount(0);
-      }
+      setUnreadCount(res.data.unread_count);
     } catch {
       // Keep the app shell usable if notifications are temporarily unavailable.
     }
     setNotifLoading(false);
+  }
+
+  async function markAllNotificationsRead() {
+    try {
+      await api.patch("/notifications/read-all");
+      setUnreadCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true, read_at: new Date().toISOString() })));
+    } catch {
+      // Reading notifications should not block navigation.
+    }
   }
 
   return (
@@ -215,15 +230,25 @@ function Layout() {
       {notifOpen && (
         <div className="notif-panel" ref={panelRef} role="dialog" aria-label="Notificações">
           <div className="notif-panel-header">
-            <strong>Notificações</strong>
-            <button
-              className="notif-panel-close"
-              type="button"
-              onClick={() => setNotifOpen(false)}
-              aria-label="Fechar"
-            >
-              ✕
-            </button>
+            <div>
+              <strong>Notificações</strong>
+              <span>{unreadCount > 0 ? `${unreadCount} não lidas` : "Tudo em dia"}</span>
+            </div>
+            <div className="notif-panel-actions">
+              {unreadCount > 0 && (
+                <button className="notif-link-action" type="button" onClick={markAllNotificationsRead}>
+                  Ler todas
+                </button>
+              )}
+              <button
+                className="notif-panel-close"
+                type="button"
+                onClick={() => setNotifOpen(false)}
+                aria-label="Fechar"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           {notifLoading ? (
@@ -232,15 +257,34 @@ function Layout() {
             <p className="notif-empty">Nenhuma notificação ainda.</p>
           ) : (
             <ul className="notif-list">
-              {notifications.map((n) => (
-                <li key={n.id} className={`notif-item ${!n.is_read ? "notif-item--unread" : ""}`}>
-                  <strong className="notif-item-title">{n.title}</strong>
-                  <span className="notif-item-body">{n.body}</span>
-                  <time className="notif-item-time">{formatRelativeTime(n.created_at)}</time>
-                </li>
-              ))}
+              {notifications.map((n) => {
+                const href = getNotificationHref(n);
+                const content = (
+                  <>
+                    <strong className="notif-item-title">{n.title}</strong>
+                    <span className="notif-item-body">{n.body}</span>
+                    <time className="notif-item-time">{formatRelativeTime(n.created_at)}</time>
+                  </>
+                );
+
+                return (
+                  <li key={n.id} className={`notif-item ${!n.is_read ? "notif-item--unread" : ""}`}>
+                    {href ? (
+                      <Link to={href} onClick={() => setNotifOpen(false)}>
+                        {content}
+                      </Link>
+                    ) : content}
+                  </li>
+                );
+              })}
             </ul>
           )}
+
+          <div className="notif-panel-footer">
+            <Link to="/notifications" onClick={() => setNotifOpen(false)}>
+              Ver central de notificações
+            </Link>
+          </div>
         </div>
       )}
 
@@ -270,6 +314,7 @@ function App() {
               <Route path="tasks/table" element={<TasksTable />} />
               <Route path="calendar" element={<CalendarView />} />
               <Route path="timeline" element={<Timeline />} />
+              <Route path="notifications" element={<Notifications />} />
               <Route path="my-work" element={<MyWork />} />
               <Route path="team" element={<Team />} />
             </Route>

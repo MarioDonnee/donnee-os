@@ -14,6 +14,7 @@ class NotificationResponse(BaseModel):
     entity_id: UUID | None
     is_read: bool
     created_at: datetime | None
+    read_at: datetime | None
 
     class Config:
         from_attributes = True

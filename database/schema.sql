@@ -288,3 +288,24 @@ create trigger trg_task_checklist_items_updated_at
 before update on task_checklist_items
 for each row
 execute function set_updated_at();
+
+-- =========================
+-- NOTIFICATIONS
+-- =========================
+
+create table if not exists notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id),
+  type text not null,
+  title text not null,
+  body text not null,
+  entity_type text,
+  entity_id uuid,
+  is_read boolean not null default false,
+  created_at timestamptz not null default now(),
+  read_at timestamptz
+);
+
+create index if not exists idx_notifications_user_id on notifications(user_id);
+create index if not exists idx_notifications_user_unread on notifications(user_id, is_read) where is_read = false;
+create index if not exists idx_notifications_read_at on notifications(read_at);

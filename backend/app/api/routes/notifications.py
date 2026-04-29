@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles
@@ -18,10 +18,19 @@ router = APIRouter()
 
 @router.get("/notifications", response_model=NotificationListResponse)
 def list_notifications(
+    unread_only: bool = Query(default=False),
+    limit: int = Query(default=50, ge=1, le=100),
+    entity_type: str | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER")),
 ):
-    return get_notifications(db, current_user.id)
+    return get_notifications(
+        db=db,
+        user_id=current_user.id,
+        limit=limit,
+        unread_only=unread_only,
+        entity_type=entity_type,
+    )
 
 
 @router.get("/notifications/unread-count", response_model=UnreadCountResponse)

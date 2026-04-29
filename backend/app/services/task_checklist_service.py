@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.task_checklist_item import TaskChecklistItem
 from app.services.activity_log_service import create_log
+from app.services.notification_service import create_notification
 from app.services.task_service import get_task_by_id
 
 
@@ -95,6 +96,17 @@ def create_checklist_item(db: Session, task_id: UUID, data, current_user):
         user_id=current_user.id,
     )
 
+    if item.assignee_id and item.assignee_id != current_user.id:
+        create_notification(
+            db=db,
+            user_id=item.assignee_id,
+            type="checklist_assigned",
+            title="Checklist atribuído",
+            body=f'Você foi atribuído a "{item.title}" em "{task.title}"',
+            entity_type="task",
+            entity_id=task_id,
+        )
+
     return item
 
 
@@ -120,6 +132,7 @@ def update_checklist_item(db: Session, item_id: UUID, data, current_user):
         "assignee_id": str(item.assignee_id) if item.assignee_id else None,
         "due_date": item.due_date.isoformat() if item.due_date else None,
     }
+    old_assignee_id = item.assignee_id
     action = "checklist_item_updated"
 
     if "is_done" in update_data and update_data["is_done"] != item.is_done:
@@ -169,6 +182,23 @@ def update_checklist_item(db: Session, item_id: UUID, data, current_user):
         },
         user_id=current_user.id,
     )
+
+    if (
+        "assignee_id" in update_data
+        and item.assignee_id
+        and item.assignee_id != old_assignee_id
+        and item.assignee_id != current_user.id
+    ):
+        task = get_task_by_id(db, item.task_id)
+        create_notification(
+            db=db,
+            user_id=item.assignee_id,
+            type="checklist_assigned",
+            title="Checklist atribuído",
+            body=f'Você foi atribuído a "{item.title}" em "{task.title if task else "uma tarefa"}"',
+            entity_type="task",
+            entity_id=item.task_id,
+        )
 
     return item
 

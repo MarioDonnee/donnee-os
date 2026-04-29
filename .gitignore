@@ -33,9 +33,3 @@ Thumbs.db
 # MCP local overrides (may contain secrets)
 .mcp.json
 .mcp.local.json
-
-# Local agent skills installed on this machine
-.agents/skills/supabase/
-.agents/skills/supabase-postgres-best-practices/
-.claude/skills/supabase/
-.claude/skills/supabase-postgres-best-practices/

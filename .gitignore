@@ -29,3 +29,7 @@ Thumbs.db
 # Database dumps
 *.sql.gz
 *.dump
+
+# MCP local overrides (may contain secrets)
+.mcp.json
+.mcp.local.json

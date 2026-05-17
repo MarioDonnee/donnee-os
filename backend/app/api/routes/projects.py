@@ -1,0 +1,73 @@
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
+from app.api.deps import require_roles
+from app.db.session import get_db
+from app.schemas.activity_log import ActivityLogResponse
+from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.schemas.project_template import ProjectFromTemplateCreate, ProjectFromTemplateResponse
+from app.services.activity_log_service import get_logs_for_entity
+from app.services.project_service import (
+    create_project,
+    get_projects,
+    get_project_by_id,
+    update_project,
+)
+from app.services.project_template_service import create_project_from_template
+
+router = APIRouter()
+
+
+@router.post("", response_model=ProjectResponse)
+def create(project: ProjectCreate, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER"))):
+    return create_project(db, project, current_user)
+
+
+@router.get("", response_model=list[ProjectResponse])
+def list_projects(
+    client_id: UUID | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER")),
+):
+    return get_projects(db, client_id)
+
+
+@router.post("/from-template", response_model=ProjectFromTemplateResponse)
+def create_from_template(
+    project: ProjectFromTemplateCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("ADMIN", "MANAGER")),
+):
+    return create_project_from_template(db, project, current_user)
+
+
+@router.get("/{project_id}", response_model=ProjectResponse)
+def get_one(project_id: UUID, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER"))):
+    project = get_project_by_id(db, project_id)
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    return project
+
+
+@router.patch("/{project_id}", response_model=ProjectResponse)
+def update(project_id: UUID, project: ProjectUpdate, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER"))):
+    updated_project = update_project(db, project_id, project, current_user)
+
+    if not updated_project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    return updated_project
+
+
+@router.get("/{project_id}/activity", response_model=list[ActivityLogResponse])
+def get_activity(project_id: UUID, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER"))):
+    project = get_project_by_id(db, project_id)
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    return get_logs_for_entity(db, "project", project_id)

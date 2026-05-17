@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -11,7 +9,7 @@ from app.services.activity_log_service import get_logs_for_entity
 from app.services.client_service import (
     create_client,
     get_clients,
-    get_client_by_id,
+    get_client_by_ref,
     update_client,
 )
 
@@ -28,9 +26,9 @@ def list_clients(db: Session = Depends(get_db), current_user=Depends(require_rol
     return get_clients(db)
 
 
-@router.get("/{client_id}", response_model=ClientResponse)
-def get_one(client_id: UUID, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER"))):
-    client = get_client_by_id(db, client_id)
+@router.get("/{client_ref}", response_model=ClientResponse)
+def get_one(client_ref: str, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER"))):
+    client = get_client_by_ref(db, client_ref)
 
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -38,9 +36,14 @@ def get_one(client_id: UUID, db: Session = Depends(get_db), current_user=Depends
     return client
 
 
-@router.patch("/{client_id}", response_model=ClientResponse)
-def update(client_id: UUID, client: ClientUpdate, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER"))):
-    updated_client = update_client(db, client_id, client, current_user)
+@router.patch("/{client_ref}", response_model=ClientResponse)
+def update(client_ref: str, client: ClientUpdate, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER"))):
+    existing_client = get_client_by_ref(db, client_ref)
+
+    if not existing_client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    updated_client = update_client(db, existing_client.id, client, current_user)
 
     if not updated_client:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -48,11 +51,11 @@ def update(client_id: UUID, client: ClientUpdate, db: Session = Depends(get_db),
     return updated_client
 
 
-@router.get("/{client_id}/activity", response_model=list[ActivityLogResponse])
-def get_activity(client_id: UUID, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER"))):
-    client = get_client_by_id(db, client_id)
+@router.get("/{client_ref}/activity", response_model=list[ActivityLogResponse])
+def get_activity(client_ref: str, db: Session = Depends(get_db), current_user=Depends(require_roles("ADMIN", "MANAGER", "ANALYST", "VIEWER"))):
+    client = get_client_by_ref(db, client_ref)
 
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
 
-    return get_logs_for_entity(db, "client", client_id)
+    return get_logs_for_entity(db, "client", client.id)

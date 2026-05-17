@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { getCache, setCache } from "../services/cache";
+import { getShortEntityId } from "../utils/format";
 
 type Client = {
   id: string;
@@ -187,7 +188,7 @@ export function Clients() {
                 <strong className={`status-pill ${getClientStatusClass(client.status)}`}>
                   {client.status}
                 </strong>
-                <button className="ghost-action" type="button" onClick={() => navigate(`/clients/${client.id}`)}>Ver</button>
+                <button className="ghost-action" type="button" onClick={() => navigate(`/clients/${getShortEntityId(client.id)}`)}>Ver</button>
               </article>
             ))}
           </div>

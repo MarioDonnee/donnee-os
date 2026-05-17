@@ -37,6 +37,8 @@ type Task = {
   labels?: Label[];
   checklist_total?: number;
   checklist_done?: number;
+  comments_count?: number;
+  comment_count?: number;
 };
 
 type ChecklistItem = {
@@ -89,6 +91,13 @@ const taskStatusesCacheKey = "metadata:task-statuses";
 const taskPrioritiesCacheKey = "metadata:task-priorities";
 const labelPalette = ["violet", "cyan", "green", "amber", "red", "magenta"];
 
+function formatStatusLabel(status: string): string {
+  return status
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function getTaskStatusClass(status: string) {
   const normalized = status.toLowerCase();
 
@@ -126,10 +135,31 @@ function getPriorityClass(priority: string) {
   return "status-backlog";
 }
 
+function getPriorityLabel(priority: string) {
+  const normalized = priority.toLowerCase();
+
+  if (normalized.includes("urgent")) return "Urgente";
+  if (normalized.includes("high")) return "Alta";
+  if (normalized.includes("medium")) return "Média";
+  if (normalized.includes("low")) return "Baixa";
+
+  return formatStatusLabel(priority);
+}
+
 function formatDate(value?: string | null) {
   if (!value) return "não informado";
 
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(value));
+}
+
+function formatShortDate(value?: string | null) {
+  if (!value) return "";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(value));
 }
 
 function formatDateTime(value?: string | null) {
@@ -195,6 +225,7 @@ export function Tasks() {
   const [isSaving, setIsSaving] = useState(false);
   const [draggingTaskId, setDraggingTaskId] = useState("");
   const [draggingOverColumn, setDraggingOverColumn] = useState("");
+  const [pressedTaskId, setPressedTaskId] = useState("");
   const [savingTaskId, setSavingTaskId] = useState("");
   const [actionLogs, setActionLogs] = useState<ActionLog[]>([]);
   const [error, setError] = useState("");
@@ -242,6 +273,13 @@ export function Tasks() {
       || filterLabelId
       || filterOverdue
       || filterOnlyMine,
+  );
+  const hasVisibleFilterChips = Boolean(
+    filterSearch.trim()
+      || filterProjectId
+      || filterStatus
+      || filterPriority
+      || filterLabelId,
   );
 
   // Debounce search: update debouncedFilterSearch 300ms after the last keystroke
@@ -381,6 +419,30 @@ export function Tasks() {
     const percent = total > 0 ? Math.round((done / total) * 100) : 0;
 
     return { total, done, percent };
+  }
+
+  function getTaskCommentCount(task: Task) {
+    return task.comments_count ?? task.comment_count ?? 0;
+  }
+
+  function getAssigneeLabel(task: Task) {
+    if (!task.assignee_id) return "Sem responsável";
+    if (task.assignee_id === currentUser?.id) return currentUser?.name || "Você";
+    return task.assignee_id;
+  }
+
+  function getAssigneeInitials(task: Task) {
+    const label = getAssigneeLabel(task);
+
+    if (!task.assignee_id) return "?";
+
+    return label
+      .split(/[\s._-]+/)
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
   }
 
   async function attachLabel(labelId: string) {
@@ -845,7 +907,7 @@ export function Tasks() {
   }, [fetchData]);
 
   return (
-    <section className="content">
+    <section className="content tasks-content">
       <header className="page-header">
         <p className="eyebrow">Donnée OS</p>
         <h1>Tarefas</h1>
@@ -1025,27 +1087,41 @@ export function Tasks() {
           </button>
         </div>
 
-        {hasActiveFilters && (
+        {hasVisibleFilterChips && (
           <div className="active-filter-list" aria-label="Filtros ativos">
             {filterSearch.trim() && <span className="meta-chip">Busca: {filterSearch.trim()}</span>}
             {filterProjectId && <span className="meta-chip">Projeto: {projects.find((project) => project.id === filterProjectId)?.name || "selecionado"}</span>}
             {filterStatus && <span className="meta-chip">Status: {filterStatus}</span>}
             {filterPriority && <span className="meta-chip">Prioridade: {filterPriority}</span>}
             {filterLabelId && <span className="meta-chip">Label: {getLabelName(filterLabelId)}</span>}
-            {filterOverdue && <span className="meta-chip">Atrasadas</span>}
-            {filterOnlyMine && <span className="meta-chip">Minhas tarefas</span>}
           </div>
         )}
 
         {isLoading ? (
-          <p className="muted" aria-live="polite">Carregando tarefas...</p>
+          <div className="kanban-board" aria-live="polite" aria-label="Carregando tarefas">
+            {[1, 2, 3, 4, 5].map((col) => (
+              <div className="kanban-column" key={col}>
+                <div className="kanban-column-header">
+                  <span className="skeleton-line" style={{ width: "80px", height: "24px", borderRadius: "999px" }} />
+                  <span className="skeleton-dot" />
+                </div>
+                {[1, 2].map((card) => (
+                  <div className="task-card" key={card} style={{ gap: "10px", pointerEvents: "none" }}>
+                    <div className="skeleton-line" style={{ width: "90%", height: "14px" }} />
+                    <div className="skeleton-line skeleton-line-short" style={{ height: "12px" }} />
+                    <div className="skeleton-line" style={{ width: "60%", height: "10px" }} />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         ) : tasks.length === 0 ? (
           <p className="empty-state">
             {hasActiveFilters ? "Nenhuma tarefa combina com os filtros ativos." : "Nenhuma tarefa cadastrada ainda."}
           </p>
         ) : (
-          <div className="task-workspace">
-            <div className="kanban-board">
+          <div className="kanban-full">
+            <div className="kanban-board" style={{ gridTemplateColumns: `repeat(${statuses.length || 5}, minmax(0, 1fr))` }}>
               {(statuses.length > 0 ? statuses : Array.from(new Set(tasks.map((task) => task.status)))).map((taskStatus) => {
                 const columnTasks = getTasksByStatus(taskStatus);
                 const isDropTarget = Boolean(draggingTaskId);
@@ -1070,18 +1146,24 @@ export function Tasks() {
                   >
                     <div className="kanban-column-header">
                       <strong className={`status-pill ${getTaskStatusClass(taskStatus)}`}>
-                        {taskStatus}
+                        {formatStatusLabel(taskStatus)}
                       </strong>
-                      <span className="kanban-count">{columnTasks.length}</span>
+                      <span className="kanban-count">
+                        {columnTasks.length}
+                      </span>
                     </div>
 
                     {columnTasks.length === 0 ? (
-                      <p className="empty-state">Solte uma tarefa aqui.</p>
+                      <p className="empty-state kanban-empty-state">
+                        Sem tarefas
+                      </p>
                     ) : (
                       columnTasks.map((task) => (
                         <article
                           aria-grabbed={draggingTaskId === task.id}
                           className={`task-card ${draggingTaskId === task.id ? "task-card-dragging" : ""} ${
+                            pressedTaskId === task.id ? "task-card-pressed" : ""
+                          } ${
                             savingTaskId === task.id ? "task-card-saving" : ""
                           }`}
                           draggable={savingTaskId !== task.id}
@@ -1093,12 +1175,20 @@ export function Tasks() {
                               openTaskDetail(task);
                             }
                           }}
-                          onDragEnd={() => setDraggingTaskId("")}
+                          onDragEnd={() => {
+                            setDraggingTaskId("");
+                            setPressedTaskId("");
+                          }}
                           onDragStart={(event) => {
                             event.dataTransfer.effectAllowed = "move";
                             event.dataTransfer.setData("text/plain", task.id);
                             setDraggingTaskId(task.id);
                           }}
+                          onMouseDown={() => setPressedTaskId(task.id)}
+                          onMouseLeave={() => setPressedTaskId("")}
+                          onMouseUp={() => setPressedTaskId("")}
+                          onTouchEnd={() => setPressedTaskId("")}
+                          onTouchStart={() => setPressedTaskId(task.id)}
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => {
                             event.preventDefault();
@@ -1110,44 +1200,67 @@ export function Tasks() {
                           role="button"
                           tabIndex={0}
                         >
-                          <div className="task-card-header">
-                            <strong className="task-card-title">{task.title}</strong>
-                            <span className={`status-pill ${getPriorityClass(task.priority)}`}>
-                              {task.priority}
-                            </span>
-                          </div>
-                          <div className="task-card-meta">
-                            <span>{getProjectName(task)}</span>
-                            <span className={`due-chip ${getDueStatusClass(task.due_status)}`} title={task.due_date ? formatDate(task.due_date) : undefined}>
-                              {getDueStatusLabel(task.due_status)}
-                            </span>
-                          </div>
                           {(task.labels || []).length > 0 && (
-                            <div className="label-chip-list">
-                              {(task.labels || []).map((label) => (
-                                <span className={`label-chip label-${label.color}`} key={label.id}>
+                            <div className="task-card-category-row">
+                              {(task.labels || []).slice(0, 1).map((label) => (
+                                <span className={`label-chip task-card-label-chip label-${label.color}`} key={label.id} title={label.name}>
                                   {label.name}
                                 </span>
                               ))}
+                              {(task.labels || []).length > 1 && (
+                                <span className="task-card-extra-count">+{(task.labels || []).length - 1}</span>
+                              )}
                             </div>
                           )}
-                          {(task.checklist_total || 0) > 0 && (
-                            <div className="checklist-card-progress" aria-label="Progresso do checklist">
-                              <div className="checklist-progress-label">
-                                <span>Checklist</span>
-                                <strong>
-                                  {getTaskChecklistStats(task).done}/{getTaskChecklistStats(task).total}
-                                </strong>
-                              </div>
-                              <div className="checklist-progress-track">
-                                <span style={{ width: `${getTaskChecklistStats(task).percent}%` }} />
-                              </div>
-                            </div>
-                          )}
-                          <div className="task-card-footer" aria-hidden="true">
-                            <span className="drag-affordance" />
-                            {savingTaskId === task.id && <span>Salvando</span>}
+
+                          <div className="task-card-header">
+                            <span
+                              className={`task-card-priority-dot task-card-priority-dot--${task.priority.toLowerCase()}`}
+                              title={task.priority}
+                            />
+                            <strong className="task-card-title" title={task.title}>{task.title}</strong>
                           </div>
+
+                          <div className="task-card-meta">
+                            <span className="meta-chip task-card-project-chip" title={getProjectName(task)}>
+                              <span>{getProjectName(task)}</span>
+                            </span>
+                          </div>
+
+                          <div className="task-card-signal-row">
+                            <span className={`task-card-priority-pill ${getPriorityClass(task.priority)}`}>
+                              {getPriorityLabel(task.priority)}
+                            </span>
+                            <span className={`due-chip due-chip-xs ${getDueStatusClass(task.due_status)}`} title={task.due_date ? formatDate(task.due_date) : undefined}>
+                              {task.due_date ? formatShortDate(task.due_date) : getDueStatusLabel(task.due_status)}
+                            </span>
+                            <span className={`task-card-assignee ${!task.assignee_id ? "task-card-assignee-empty" : ""}`} title={getAssigneeLabel(task)}>
+                              {getAssigneeInitials(task)}
+                            </span>
+                          </div>
+
+                          {((task.checklist_total || 0) > 0 || getTaskCommentCount(task) > 0 || savingTaskId === task.id) && (
+                          <div className="task-card-footer">
+                            {(task.checklist_total || 0) > 0 ? (
+                              <div className="task-card-progress" aria-label="Progresso do checklist">
+                                <span className="task-card-progress-track">
+                                  <span style={{ width: `${getTaskChecklistStats(task).percent}%` }} />
+                                </span>
+                                <span>{getTaskChecklistStats(task).done}/{getTaskChecklistStats(task).total}</span>
+                              </div>
+                            ) : (
+                              <span className="task-card-progress-placeholder" aria-hidden="true" />
+                            )}
+
+                            {getTaskCommentCount(task) > 0 && (
+                              <span className="task-card-comment-count" title={`${getTaskCommentCount(task)} comentários`}>
+                                {getTaskCommentCount(task)}
+                              </span>
+                            )}
+
+                            {savingTaskId === task.id && <span className="task-card-saving-text">Salvando...</span>}
+                          </div>
+                          )}
                         </article>
                       ))
                     )}
@@ -1156,33 +1269,18 @@ export function Tasks() {
               })}
             </div>
 
-            <aside className="task-log-panel" aria-label="Log de ações">
-              <div className="panel-heading">
-                <div>
-                  <h2>Log de ações</h2>
-                  <p className="row-detail">Mudanças desta sessão. O backend registra updates em activity_logs.</p>
-                </div>
+            {actionLogs.length > 0 && (
+              <div className="action-log-strip" aria-label="Log de ações da sessão">
+                {actionLogs.map((log) => (
+                  <span className={`action-log-chip action-log-chip--${log.status}`} key={log.id}>
+                    <span className="signal-marker" />
+                    <strong>{log.taskTitle}</strong>
+                    <span style={{ color: "var(--text-muted)" }}>{log.from} → {log.to}</span>
+                    <small>{log.status === "saving" ? "salvando..." : log.status === "saved" ? "salvo" : "erro"}</small>
+                  </span>
+                ))}
               </div>
-
-              {actionLogs.length === 0 ? (
-                <p className="empty-state">Arraste uma tarefa para iniciar o histórico.</p>
-              ) : (
-                <div className="task-action-list">
-                  {actionLogs.map((log) => (
-                    <div className={`task-action-item task-action-${log.status}`} key={log.id}>
-                      <span className="signal-marker" />
-                      <div>
-                        <strong>{log.taskTitle}</strong>
-                        <p className="row-detail">
-                          {log.from} → {log.to}
-                        </p>
-                      </div>
-                      <small>{log.status === "saving" ? "salvando" : log.timestamp}</small>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </aside>
+            )}
           </div>
         )}
       </div>

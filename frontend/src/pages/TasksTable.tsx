@@ -279,7 +279,6 @@ export function TasksTable() {
                   <tr key={task.id} className={overdue ? "row-overdue" : ""}>
                     <td className="td-title">
                       <span className="task-title-cell">{task.title}</span>
-                      {overdue && <span className="overdue-badge">Atrasada</span>}
                     </td>
                     <td className="td-secondary">{project?.name ?? "—"}</td>
                     <td className="td-secondary">{client?.name ?? "—"}</td>

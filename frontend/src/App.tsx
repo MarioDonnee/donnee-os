@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route, Link, NavLink, Outlet } from "react-router-dom";
-import { Bell, BriefcaseBusiness, Calendar, LayoutDashboard, ListTodo, LogOut, Rows3, Table2, User2, UserCog, Users } from "lucide-react";
+import { Bell, BriefcaseBusiness, Calendar, LayoutDashboard, ListTodo, LogOut, Moon, Rows3, Sun, Table2, User2, UserCog, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
@@ -21,6 +21,7 @@ import { Projects } from "./pages/Projects";
 import { Tasks } from "./pages/Tasks";
 import { TasksTable } from "./pages/TasksTable";
 import { api } from "./services/api";
+import { getShortEntityId } from "./utils/format";
 import "./styles.css";
 
 type NavItem = {
@@ -84,12 +85,27 @@ function formatRelativeTime(iso: string | null): string {
 function getNotificationHref(notification: NotificationItem): string | null {
   if (notification.entity_type === "task") return "/tasks";
   if (notification.entity_type === "project" && notification.entity_id) return `/projects/${notification.entity_id}`;
-  if (notification.entity_type === "client" && notification.entity_id) return `/clients/${notification.entity_id}`;
+  if (notification.entity_type === "client" && notification.entity_id) return `/clients/${getShortEntityId(notification.entity_id)}`;
   return null;
+}
+
+function useTheme() {
+  const [theme, setTheme] = useState<"dark" | "bright">(() => {
+    return (localStorage.getItem("donnee-theme") as "dark" | "bright") || "dark";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("donnee-theme", theme);
+  }, [theme]);
+
+  const toggle = () => setTheme((t) => (t === "dark" ? "bright" : "dark"));
+  return { theme, toggle };
 }
 
 function Layout() {
   const { currentUser, signOut } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -158,8 +174,11 @@ function Layout() {
 
       <aside className="sidebar">
         <div className="brand" aria-label="Donnée OS">
-          <span className="brand-mark">d</span>
-          <span>donnée</span>
+          <img
+            alt="Donnée OS"
+            className="brand-logo"
+            src="/imgs/logo_nome_simboloroxo_fundoverde-removebg.png"
+          />
         </div>
 
         <nav aria-label="Navegação principal">
@@ -212,6 +231,11 @@ function Layout() {
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
+          </button>
+
+          <button className="ghost-action theme-toggle" type="button" onClick={toggleTheme} aria-label="Alternar tema">
+            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            {theme === "dark" ? "Modo claro" : "Modo escuro"}
           </button>
 
           <button className="ghost-action sidebar-logout" type="button" onClick={signOut}>

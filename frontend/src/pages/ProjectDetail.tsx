@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, CheckSquare, Clock } from "lucide-react";
 import { api } from "../services/api";
 import { getDueStatusClass, getDueStatusLabel, getRiskStatusClass, getRiskStatusLabel } from "../utils/risk";
+import { getShortEntityId } from "../utils/format";
 
 type Project = {
   id: string;
@@ -22,6 +23,7 @@ type Task = {
   title: string;
   status: string;
   priority: string;
+  position: number;
   due_date?: string | null;
   due_status?: string | null;
   checklist_total?: number;
@@ -78,6 +80,9 @@ export function ProjectDetail() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [draggingTaskId, setDraggingTaskId] = useState("");
+  const [draggingOverStatus, setDraggingOverStatus] = useState("");
+  const [savingTaskId, setSavingTaskId] = useState("");
 
   async function loadTasks() {
     const res = await api.get(`/tasks?project_id=${projectId}`);
@@ -165,9 +170,84 @@ export function ProjectDetail() {
     : 0;
 
   const tasksByStatus = KANBAN_STATUSES.reduce<Record<string, Task[]>>((acc, s) => {
-    acc[s] = tasks.filter((t) => t.status === s);
+    acc[s] = tasks.filter((t) => t.status === s).sort((a, b) => a.position - b.position);
     return acc;
   }, {});
+
+  function getNextProjectTasksAfterMove(taskId: string, nextStatus: string, nextPosition: number) {
+    const movingTask = tasks.find((task) => task.id === taskId);
+    if (!movingTask) return tasks;
+
+    const sourceStatus = movingTask.status;
+    const sourceTasks = tasks
+      .filter((task) => task.status === sourceStatus && task.id !== taskId)
+      .sort((a, b) => a.position - b.position)
+      .map((task, index) => ({ ...task, position: index }));
+
+    const destinationTasks = tasks
+      .filter((task) => task.status === nextStatus && task.id !== taskId)
+      .sort((a, b) => a.position - b.position);
+
+    const boundedPosition = Math.max(0, Math.min(nextPosition, destinationTasks.length));
+    const movedTask = { ...movingTask, status: nextStatus, position: boundedPosition };
+    const orderedDestinationTasks = [
+      ...destinationTasks.slice(0, boundedPosition),
+      movedTask,
+      ...destinationTasks.slice(boundedPosition),
+    ].map((task, index) => ({ ...task, position: index }));
+
+    if (sourceStatus === nextStatus) {
+      return tasks.map((task) =>
+        task.status === nextStatus
+          ? orderedDestinationTasks.find((destinationTask) => destinationTask.id === task.id) ?? task
+          : task,
+      );
+    }
+
+    return tasks.map((task) => {
+      if (task.status === sourceStatus && task.id !== taskId) {
+        return sourceTasks.find((sourceTask) => sourceTask.id === task.id) ?? task;
+      }
+
+      if (task.status === nextStatus || task.id === taskId) {
+        return orderedDestinationTasks.find((destinationTask) => destinationTask.id === task.id) ?? task;
+      }
+
+      return task;
+    });
+  }
+
+  async function moveProjectTask(taskId: string, nextStatus: string, nextPosition: number) {
+    const task = tasks.find((currentTask) => currentTask.id === taskId);
+    if (!task || savingTaskId === taskId) return;
+
+    const previousTasks = tasks;
+    const nextTasks = getNextProjectTasksAfterMove(taskId, nextStatus, nextPosition);
+    const movedTask = nextTasks.find((currentTask) => currentTask.id === taskId);
+    if (!movedTask || (task.status === movedTask.status && task.position === movedTask.position)) return;
+
+    setSavingTaskId(taskId);
+    setTasks(nextTasks);
+
+    try {
+      const response = await api.patch(`/tasks/${taskId}/move`, {
+        status: movedTask.status,
+        position: movedTask.position,
+      });
+      setTasks((currentTasks) =>
+        currentTasks.map((currentTask) =>
+          currentTask.id === taskId ? { ...currentTask, ...response.data } : currentTask,
+        ),
+      );
+    } catch {
+      setTasks(previousTasks);
+      setError("Não foi possível salvar a mudança de status. A tarefa voltou ao estado anterior.");
+    } finally {
+      setSavingTaskId("");
+      setDraggingTaskId("");
+      setDraggingOverStatus("");
+    }
+  }
 
   return (
     <section className="content">
@@ -186,7 +266,7 @@ export function ProjectDetail() {
                 <button
                   className="inline-link"
                   type="button"
-                  onClick={() => navigate(`/clients/${project.client_id}`)}
+                  onClick={() => navigate(`/clients/${getShortEntityId(project.client_id)}`)}
                 >
                   {clientName}
                 </button>
@@ -290,7 +370,23 @@ export function ProjectDetail() {
 
         <div className="project-kanban">
           {KANBAN_STATUSES.map((status) => (
-            <div key={status} className="project-kanban-col">
+            <div
+              key={status}
+              className={`project-kanban-col ${draggingTaskId ? "project-kanban-col-target" : ""} ${draggingOverStatus === status ? "project-kanban-col-hover" : ""}`}
+              onDragOver={(event) => event.preventDefault()}
+              onDragEnter={() => setDraggingOverStatus(status)}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                  setDraggingOverStatus("");
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDraggingOverStatus("");
+                const taskId = event.dataTransfer.getData("text/plain") || draggingTaskId;
+                requestAnimationFrame(() => moveProjectTask(taskId, status, tasksByStatus[status].length));
+              }}
+            >
               <div className="kanban-col-header">
                 <span className={`status-dot status-dot-${status.toLowerCase()}`} />
                 <span>{status.replace("_", " ")}</span>
@@ -303,7 +399,22 @@ export function ProjectDetail() {
                   tasksByStatus[status].map((task) => (
                     <article
                       key={task.id}
-                      className={`mini-task-card ${isOverdue(task) ? "mini-task-overdue" : ""}`}
+                      className={`mini-task-card ${isOverdue(task) ? "mini-task-overdue" : ""} ${draggingTaskId === task.id ? "mini-task-dragging" : ""} ${savingTaskId === task.id ? "mini-task-saving" : ""}`}
+                      draggable={savingTaskId !== task.id}
+                      onDragEnd={() => setDraggingTaskId("")}
+                      onDragStart={(event) => {
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/plain", task.id);
+                        setDraggingTaskId(task.id);
+                      }}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const draggedTaskId = event.dataTransfer.getData("text/plain") || draggingTaskId;
+                        const targetPosition = tasksByStatus[status].findIndex((statusTask) => statusTask.id === task.id);
+                        requestAnimationFrame(() => moveProjectTask(draggedTaskId, status, targetPosition));
+                      }}
                     >
                       <span className="mini-task-title">{task.title}</span>
                       <div className="mini-task-meta">

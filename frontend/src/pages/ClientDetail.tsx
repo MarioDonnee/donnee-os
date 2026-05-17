@@ -74,13 +74,16 @@ export function ClientDetail() {
     if (!clientId) return;
     let isMounted = true;
 
-    Promise.all([
-      api.get(`/clients/${clientId}`),
-      api.get(`/projects?client_id=${clientId}`),
-      api.get(`/tasks?client_id=${clientId}`),
-      api.get(`/clients/${clientId}/activity`),
-    ])
-      .then(([clientRes, projectsRes, tasksRes, activityRes]) => {
+    api.get(`/clients/${clientId}`)
+      .then(async (clientRes) => {
+        if (!isMounted) return;
+        const resolvedClientId = clientRes.data.id;
+        const [projectsRes, tasksRes, activityRes] = await Promise.all([
+          api.get(`/projects?client_id=${resolvedClientId}`),
+          api.get(`/tasks?client_id=${resolvedClientId}`),
+          api.get(`/clients/${resolvedClientId}/activity`),
+        ]);
+
         if (!isMounted) return;
         setClient(clientRes.data);
         setProjects(projectsRes.data);

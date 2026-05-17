@@ -77,6 +77,9 @@ const emptySummary: DashboardSummary = {
 
 let cachedDashboardSummary: DashboardSummary | null = null;
 
+const STATUS_ORDER = ["BACKLOG", "IN_PROGRESS", "REVIEW", "BLOCKED", "DONE", "CANCELLED"];
+const PRIORITY_ORDER = ["LOW", "MEDIUM", "HIGH", "URGENT"];
+
 type MetricCardProps = {
   title: string;
   value: number;
@@ -269,12 +272,20 @@ export function Dashboard() {
   const isInitialLoading = !summary && isRefreshing;
 
   const statusEntries = useMemo(
-    () => Object.entries(visibleSummary.tasks_by_status).sort((a, b) => b[1] - a[1]),
+    () => Object.entries(visibleSummary.tasks_by_status).sort((a, b) => {
+      const aIndex = STATUS_ORDER.indexOf(a[0]);
+      const bIndex = STATUS_ORDER.indexOf(b[0]);
+      return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+    }),
     [visibleSummary.tasks_by_status],
   );
 
   const priorityEntries = useMemo(
-    () => Object.entries(visibleSummary.tasks_by_priority).sort((a, b) => b[1] - a[1]),
+    () => Object.entries(visibleSummary.tasks_by_priority).sort((a, b) => {
+      const aIndex = PRIORITY_ORDER.indexOf(a[0]);
+      const bIndex = PRIORITY_ORDER.indexOf(b[0]);
+      return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+    }),
     [visibleSummary.tasks_by_priority],
   );
 
@@ -285,7 +296,6 @@ export function Dashboard() {
   return (
     <section className="content dashboard-content">
       <header className="page-header dashboard-hero">
-        <div className="hero-orbit" aria-hidden="true" />
         <div className="hero-copy">
           <p className="eyebrow">Donnée OS</p>
           <h1>Intelligence Console</h1>

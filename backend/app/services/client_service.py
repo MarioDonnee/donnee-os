@@ -1,4 +1,5 @@
 from uuid import UUID
+from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 
 from app.models.client import Client
@@ -38,6 +39,28 @@ def get_client_by_id(db: Session, client_id: UUID):
         .filter(Client.id == client_id, Client.deleted_at.is_(None))
         .first()
     )
+
+
+def get_client_by_ref(db: Session, client_ref: str):
+    try:
+        return get_client_by_id(db, UUID(client_ref))
+    except ValueError:
+        pass
+
+    if len(client_ref) < 8:
+        return None
+
+    matches = (
+        db.query(Client)
+        .filter(
+            cast(Client.id, String).ilike(f"{client_ref}%"),
+            Client.deleted_at.is_(None),
+        )
+        .limit(2)
+        .all()
+    )
+
+    return matches[0] if len(matches) == 1 else None
 
 
 def update_client(db: Session, client_id: UUID, data, current_user=None):

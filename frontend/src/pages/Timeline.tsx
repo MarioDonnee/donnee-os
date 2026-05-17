@@ -74,6 +74,26 @@ function getPriorityClass(priority: string) {
   return "priority-low";
 }
 
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function assignLanes(tasks: TimelineTask[]): number[] {
+  const laneEnds: Date[] = [];
+  return tasks.map((item) => {
+    const visualEnd = addDays(item.end, 1);
+    const lane = laneEnds.findIndex((end) => item.start > end);
+    if (lane >= 0) {
+      laneEnds[lane] = visualEnd;
+      return lane;
+    }
+    laneEnds.push(visualEnd);
+    return laneEnds.length - 1;
+  });
+}
+
 export function Timeline() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -270,6 +290,8 @@ export function Timeline() {
           <div className="timeline-group-list">
             {groups.map((group) => {
               const milestoneLeft = getMilestonePosition(group.project);
+              const lanes = assignLanes(group.tasks);
+              const laneCount = lanes.length > 0 ? Math.max(...lanes) + 1 : 1;
 
               return (
                 <article className="timeline-group" key={group.project.id}>
@@ -279,7 +301,7 @@ export function Timeline() {
                     {group.project.due_date && <small>Marco: {formatDate(group.project.due_date)}</small>}
                   </div>
 
-                  <div className="timeline-track">
+                  <div className="timeline-track" style={{ minHeight: Math.max(86, laneCount * 42 + 20) }}>
                     {milestoneLeft && (
                       <span
                         className="timeline-milestone"
@@ -288,14 +310,14 @@ export function Timeline() {
                       />
                     )}
 
-                    {group.tasks.map((item) => {
+                    {group.tasks.map((item, taskIndex) => {
                       const position = getPosition(item.start, item.end);
 
                       return (
                         <Link
-                          className={`timeline-bar ${item.isPoint ? "timeline-bar-point" : ""} ${item.isOverdue ? "timeline-bar-risk" : ""} ${getPriorityClass(item.task.priority)}`}
+                          className={`timeline-bar ${item.isPoint ? "timeline-bar-single-day" : ""} ${item.isOverdue ? "timeline-bar-risk" : ""} ${getPriorityClass(item.task.priority)}`}
                           key={item.task.id}
-                          style={position}
+                          style={{ ...position, top: 12 + lanes[taskIndex] * 42 }}
                           title={`${item.task.title}: ${formatShortDate(item.start)} até ${formatShortDate(item.end)}`}
                           to="/tasks"
                         >

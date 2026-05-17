@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, CheckCheck, Filter, Inbox } from "lucide-react";
 import { api } from "../services/api";
+import { getShortEntityId } from "../utils/format";
 
 type NotificationItem = {
   id: string;
@@ -35,7 +36,7 @@ function formatDateTime(iso: string | null) {
 function getNotificationHref(notification: NotificationItem): string | null {
   if (notification.entity_type === "task") return "/tasks";
   if (notification.entity_type === "project" && notification.entity_id) return `/projects/${notification.entity_id}`;
-  if (notification.entity_type === "client" && notification.entity_id) return `/clients/${notification.entity_id}`;
+  if (notification.entity_type === "client" && notification.entity_id) return `/clients/${getShortEntityId(notification.entity_id)}`;
   return null;
 }
 
